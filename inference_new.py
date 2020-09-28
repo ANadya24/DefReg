@@ -70,7 +70,7 @@ def save(seq, deformations, path, name):
     os.makedirs(path + '/deformations/', exist_ok=True)
     new_seq = []
     new_def = []
-    SP = SpatialTransformer(deformations.shape[1:-1])
+    SP = SpatialTransformer(seq[0].shape)
 
     for i, im in enumerate(seq):
         if im.shape[-1] == 3:
@@ -107,8 +107,7 @@ def save(seq, deformations, path, name):
 
             print('After ', defxy.min(), defxy.max())
             new_def.append(defxy)
-            print(im[None, :, :, None].shape, defxy[None].shape)
-            im_new = SP(torch.tensor(im[None, :, :, None] / 255, dtype=torch.float),
+            im_new = SP(torch.tensor(im[None, None, :, :] / 255, dtype=torch.float),
                         torch.tensor(defxy.transpose((2, 0, 1))[None], dtype=torch.float)).squeeze()
             im_new = np.uint8(im_new.numpy() * 255)
             # im_new = forward_warp(im, defxy)
@@ -160,5 +159,5 @@ def predict(model_path, image_path, im_size, batch_size, save_path, is_2d=True):
 
 if __name__ == "__main__":
     predict('/home/nadya/Projects/VoxelMorph/snapshots/saved_models_crosscor/vm_200',
-            '/home/nadya/Projects/VoxelMorph//data/', (1, 128, 128),
-            2, '/home/nadya/Projects/VoxelMorph/data/registered/result/cross_corr/')
+            '/home/nadya/Projects/VoxelMorph/data/', (1, 128, 128),
+            6, '/home/nadya/Projects/VoxelMorph/data/registered/result/cross_corr/')
