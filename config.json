@@ -1,0 +1,25 @@
+{
+    "data_path": "/home/nadya/Projects/VoxelMorph/dataset/train_set.pkl",
+    "data_path_val": "/home/nadya/Projects/VoxelMorph/dataset/test_set.pkl",
+    "batch_size": 4,
+    "num_epochs": 200,
+    "load_epoch": 0,
+    "model_path": "./saved_models_test/vm_",
+    "size_path": "/home/nadya/Projects/VoxelMorph/data/sizes.txt",
+    "learning_rate": 1e-3,
+    "smooth": 0.2,
+    "masks": false,
+    "data_shape": [
+        1,
+        128,
+        128
+    ],
+    "num_workers": 0,
+    "save_dir": "./saved_models_test/",
+    "save_step": 10,
+    "image_dir": "./val_images_test/",
+    "log_dir": "./logs/test/",
+    "model_name": "vm",
+    "use_gpu": true,
+    "tensorboard": true
+}
