@@ -172,6 +172,10 @@ class Dataset(data.Dataset):
                 deformation = deformation[::-1].copy()
                 deformation[:, :, 1] *= -1
 
+            if np.random.rand() < 0.2:
+                moving_image = fixed_image.copy()
+                deformation = deformation * 0.
+
 
 
         moving_image = to_tensor(moving_image).float()

@@ -97,8 +97,8 @@ def mutual_information(pred, target):
 
 
 def ssim(pred, target):
-    ssim_loss = pytorch_ssim.SSIM()
-    ssim_out = 1 - ssim_loss(pred, target)
+    ssim_measure = pytorch_ssim.SSIM()
+    ssim_out = 1 - ssim_measure(pred, target)
     return ssim_out
 
 
