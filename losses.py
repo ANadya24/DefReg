@@ -90,8 +90,7 @@ This should be differentiable.
 
 
 def mutual_information(pred, target):
-    #todo
-    return out
+    return torch.mean(torch.log(target + 1e-8) + torch.log(1 - pred + 1e-8))
 
 
 '''ssim'''
@@ -121,13 +120,13 @@ def construct_loss(loss_names, weights=None, n=9, sm_lambda=0.01, use_gpu=False,
     loss.append(lambda x, y, dx, dy: def_lambda * L2Def(dx, dy))
     for l, w in zip(loss_names, weights):
         if l == 'cross-corr':
-            loss.append(lambda x, y, dx, dy: 1.0 -1.0 * w * cross_correlation_loss(x, y, n, use_gpu))
+            loss.append(lambda x, y, dx, dy: w * (1.0 - cross_correlation_loss(x, y, n, use_gpu)))
         elif l == 'ncc':
-            loss.append(lambda x, y, dx, dy: 1.0 -1.0 * w * ncc(x, y))
+            loss.append(lambda x, y, dx, dy: w * (1.0 - ncc(x, y)))
         elif l == 'dice':
-            loss.append(lambda x, y, dx, dy: w * dice_score(x, y))
+            loss.append(lambda x, y, dx, dy: w * (1.0 - dice_score(x, y)))
         elif l == 'mu':
-            loss.append(lambda x, y, dx, dy: w * mutual_information(x, y))
+            loss.append(lambda x, y, dx, dy: w * (1.0 - mutual_information(x, y)))
         elif l == 'ssim':
             loss.append(lambda x, y, dx, dy: w * ssim(x, y))
         elif l == 'mse':

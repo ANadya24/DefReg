@@ -175,7 +175,7 @@ class Dataset(data.Dataset):
 
 
         moving_image = to_tensor(moving_image).float()
-        deformation = torch.Tensor(deformation).permute((2, 0, 1))
+        deformation = torch.Tensor(deformation).permute((2, 0, 1))/10.
         # print(deformation.shape)
         fixed_image = to_tensor(fixed_image).float()
 
@@ -184,15 +184,18 @@ class Dataset(data.Dataset):
 
 if __name__ == '__main__':
     from glob import glob
-
+    from matplotlib import pyplot as plt
     path = '/home/nadya/Projects/VoxelMorph/dataset/train_set.pkl'
     dataset = Dataset(path, (1,256, 256), size_file='/home/nadya/Projects/VoxelMorph/data/sizes.txt',
                       smooth=True, train=True, shuffle=True)
     fixed, moving, deform = dataset[0]
+    deform *= 10.
     print(deform.min(), deform.max())
     from voxelmorph2d import SpatialTransformation
     SP = SpatialTransformation()
     print(deform.shape, moving.shape)
+    plt.imshow(np.concatenate([deform[0], deform[1]], axis=1), cmap='gray')
+    plt.waitforbuttonpress()
     movingN = SP(moving[:,:,:,None], deform[None]).squeeze()
     movingN = np.uint8(movingN.numpy()*255)
     print(movingN.shape)
@@ -201,7 +204,6 @@ if __name__ == '__main__':
 
     print(fixed.shape, moving.shape, deform.shape)
     print(fixed.max())
-    from matplotlib import pyplot as plt
     plt.imshow(np.stack([fixed, moving, np.zeros(fixed.shape, dtype='int')], axis=-1), cmap='gray')
     plt.waitforbuttonpress()
 

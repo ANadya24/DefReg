@@ -155,4 +155,4 @@ def train(load_epoch, max_epochs, train_loader, val_loader, vm, optimizer,
         # print('Epoch', epoch + 1, 'dice_train/dice_test: ', train_dice_score, '/', val_dice_score)
 
         if (epoch+1) % save_step == 0:
-            vm.save_state_dict(save_dir, model_name + f'_{epoch+1}')
+            torch.save(vm.state_dict(), save_dir+model_name + f'_{epoch+1}')

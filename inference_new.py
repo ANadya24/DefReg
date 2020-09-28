@@ -1,5 +1,4 @@
-import voxelmorph2d as vm2d
-import voxelmorph3d as vm3d
+from model import DefNet
 import torch
 import torchvision
 import numpy as np
@@ -11,7 +10,7 @@ import os
 from skimage.transform import resize
 from tqdm import tqdm
 from ffRemap import *
-from voxelmorph2d import SpatialTransformation
+from voxelmorph import SpatialTransformer
 
 use_gpu = torch.cuda.is_available()
 devices = ['cpu', 'cuda']
@@ -71,7 +70,7 @@ def save(seq, deformations, path, name):
     os.makedirs(path + '/deformations/', exist_ok=True)
     new_seq = []
     new_def = []
-    SP = SpatialTransformation(False)
+    SP = SpatialTransformer(deformations.shape[1:-1])
 
     for i, im in enumerate(seq):
         if im.shape[-1] == 3:
@@ -108,9 +107,9 @@ def save(seq, deformations, path, name):
 
             print('After ', defxy.min(), defxy.max())
             new_def.append(defxy)
-            # print(im.max(), im[None, :, :, None].shape, defxy.shape)
+            print(im[None, :, :, None].shape, defxy[None].shape)
             im_new = SP(torch.tensor(im[None, :, :, None] / 255, dtype=torch.float),
-                        torch.tensor(defxy[None], dtype=torch.float)).squeeze()
+                        torch.tensor(defxy.transpose((2, 0, 1))[None], dtype=torch.float)).squeeze()
             im_new = np.uint8(im_new.numpy() * 255)
             # im_new = forward_warp(im, defxy)
             new_seq.append(im_new)
@@ -120,25 +119,20 @@ def save(seq, deformations, path, name):
 
 def predict(model_path, image_path, im_size, batch_size, save_path, is_2d=True):
 
-    if is_2d:
-        vm = vm2d
-        voxelmorph = vm2d.VoxelMorph2d(im_size[0] * 2, use_gpu=use_gpu)
-    else:
-        vm = vm3d
-        voxelmorph = vm3d.VoxelMorph3d(im_size[0] * 2, use_gpu=use_gpu)
+    voxelmorph = DefNet(im_size[1:])
 
-    voxelmorph = torch.nn.DataParallel(voxelmorph)
+    # voxelmorph = torch.nn.DataParallel(voxelmorph)
     # voxelmorph.to('cuda')
     voxelmorph.load_state_dict(torch.load(model_path))
-    # voxelmorph.cuda()
+    voxelmorph.cuda()
     voxelmorph.eval()
 
     print("Voxelmorph loaded successfully!")
 
-    filenames = glob(image_path + '/Seq*1.tif')
+    filenames = glob(image_path + '/Seq*.tif')
     for file in filenames:
-        defs = np.zeros((1, 256, 256, 2))
-        seq = io.imread(file)[:15]
+        defs = np.zeros(im_size + (2, ))
+        seq = io.imread(file)
         chunks = [seq[i:min(i + batch_size + 1, len(seq))] for i in range(0, len(seq)-1, batch_size)]
         print(len(chunks), len(chunks[0]), len(seq), file)
         first = True
@@ -156,7 +150,7 @@ def predict(model_path, image_path, im_size, batch_size, save_path, is_2d=True):
             else:
                 new_seq = np.concatenate([new_seq, registered.detach().cpu().numpy()], axis=0)
             # print(deformations.shape, defs.shape)
-            defs = np.concatenate([defs, deformations.detach().cpu().numpy()], axis=0)
+            defs = np.concatenate([defs, deformations.detach().cpu().numpy().transpose((0, 2, 3, 1))], axis=0)
         save(seq, defs, save_path, file.split('/')[-1])
         save256(new_seq, save_path + '/128/', file.split('/')[-1])
 
@@ -165,5 +159,6 @@ def predict(model_path, image_path, im_size, batch_size, save_path, is_2d=True):
 
 
 if __name__ == "__main__":
-    predict('./saved_models_fwd/vm_900', './data/', (1, 128, 128),
-            24, './data/registered/result/fwd/')
+    predict('/home/nadya/Projects/VoxelMorph/snapshots/saved_models_crosscor/vm_200',
+            '/home/nadya/Projects/VoxelMorph//data/', (1, 128, 128),
+            2, '/home/nadya/Projects/VoxelMorph/data/registered/result/cross_corr/')
