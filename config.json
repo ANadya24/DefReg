@@ -1,18 +1,18 @@
 {
     "data_path": "/home/nadya/Projects/DefReg/dataset/train_set.pkl",
     "data_path_val": "/home/nadya/Projects/DefReg/dataset/test_set.pkl",
-    "batch_size": 2,
+    "batch_size": 1,
     "num_epochs": 200,
     "load_epoch": 0,
-    "model_path": "/home/nadya/Projects/test/",
+    "model_path": "/home/nadya/Projects/",
     "size_path": "/home/nadya/Projects/DefReg/sizes.txt",
     "learning_rate": 1e-4,
     "smooth": 0.2,
     "masks": false,
     "data_shape": [
         1,
-        128,
-        128
+        256,
+        256
     ],
     "num_workers": 4,
     "save_dir": "/home/nadya/Projects/test/",

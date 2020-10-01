@@ -158,12 +158,12 @@ def predict(model_path, image_path, im_size, batch_size, save_path, is_2d=True):
             # print(deformations.shape, defs.shape)
             defs = np.concatenate([defs, deformations.detach().cpu().numpy()], axis=0)
         save(seq, defs, save_path, file.split('/')[-1])
-        save256(new_seq, save_path + '/128/', file.split('/')[-1])
+        save256(new_seq, save_path + '/256/', file.split('/')[-1])
 
             # # print(registered_image.max(), registered_image.min())
             # save_images(batch_fixed, registered_images, deformations, imsizes, chunk, save_path)
 
 
 if __name__ == "__main__":
-    predict('./saved_models_fwd/vm_900', './data/', (1, 128, 128),
+    predict('./saved_models_fwd/vm_900', './data/', (1, 256, 256),
             24, './data/registered/result/fwd/')

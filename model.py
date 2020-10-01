@@ -130,8 +130,8 @@ class DefNet(nn.Module):
         x = torch.cat([src, tgt], dim=1)
         acts = self.encoder(x)
         x = self.decoder(acts)
-        deform = self.deformation(x)*10.
-        y = self.spatial_transform(src, deform)
+        deform = self.deformation(x)
+        y = self.spatial_transform(src, deform*10.)
         return y, deform
 
 
