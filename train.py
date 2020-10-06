@@ -69,20 +69,20 @@ def train(load_epoch, max_epochs, train_loader, val_loader, vm, optimizer,
           device, loss_func, save_dir, model_name, image_dir, save_step, use_gpu,
           use_tensorboard=False, logdir="./logs/"):
 
-    def save_model(dev_count):
+    def save_model(dev_count, name=model_name + f'_stop'):
         if dev_count > 1:
             #torch.save(vm.module.state_dict(), save_dir + model_name + f'_stop_{epoch + 1}')
             torch.save({
                 'model_state_dict': vm.module.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict()},
-                save_dir + model_name + f'_stop_{epoch + 1}')
+                save_dir + name + f'_{epoch + 1}')
                 # 'loss': loss_func}, save_dir + model_name + f'_stop_{epoch + 1}')
         else:
             # torch.save(vm.state_dict(), save_dir + model_name + f'_stop_{epoch + 1}')
             torch.save({
                 'model_state_dict': vm.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict()},
-                save_dir + model_name + f'_stop_{epoch + 1}')
+                save_dir + name + f'{epoch + 1}')
                 # 'loss': loss_func}, save_dir + model_name + f'_stop_{epoch + 1}')
         print(f"Successfuly saved state_dict in {save_dir + model_name + f'_stop_{epoch + 1}'}")
 
@@ -150,9 +150,10 @@ def train(load_epoch, max_epochs, train_loader, val_loader, vm, optimizer,
         #         #       / len(validation_set), 'and average DICE score is', val_dice_score.data.cpu().numpy()
         #         #       * params['batch_len(validation_set))
 
-        print('Epoch', epoch + 1, 'train_loss/test_loss: ', train_loss, '/', val_loss, ' dice_train/dice_test: '
-              , train_dice_score, '/', val_dice_score)
+        # print('Epoch', epoch + 1, 'train_loss/test_loss: ', train_loss, '/', val_loss, ' dice_train/dice_test: '
+              # , train_dice_score, '/', val_dice_score)
+        print('Epoch', epoch + 1, 'train_loss/test_loss: ', train_loss, '/', val_loss)
         # print('Epoch', epoch + 1, 'dice_train/dice_test: ', train_dice_score, '/', val_dice_score)
 
         if (epoch+1) % save_step == 0:
-            torch.save(vm.state_dict(), save_dir+model_name + f'_{epoch+1}')
+            save_model(torch.cuda.device_count(), model_name)

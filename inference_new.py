@@ -16,8 +16,24 @@ use_gpu = torch.cuda.is_available()
 devices = ['cpu', 'cuda']
 device = devices[use_gpu]
 
+def preprocess_im(img, imsize):
+    to_tensor = torchvision.transforms.ToTensor()
+    if img.shape[-1] == 3:
+        img = color.rgb2gray(img)
+    h, w = img.shape[:2]
+    if h / w != 1.:
+        # ch, cw = h // 2, w // 2
+        # cr = min(h, w)
+        if h < w:
+            d = w - h
+            img = np.pad(img, ((d // 2, d // 2 + d % 2), (0, 0)), 'constant')
+        else:
+            d = h - w
+            img = np.pad(img, ((0, 0), (d // 2, d // 2 + d % 2)), 'constant')
+    return to_tensor(resize(img, imsize[1:]))[None].float()
 
-def GetBatch(chunk, imsize):
+
+def GetBatch(chunk, imsize, first):
     batch_size = len(chunk)-1
     im_sizes = []
     batch_fixed = torch.empty((batch_size,) + imsize)
@@ -87,11 +103,11 @@ def save(seq, deformations, path, name):
             if h / w != 1.:
                 if h < w:
                     d = w - h
-                    tmp = resize(defxy, (w, w))
+                    tmp = resize(defxy, (w, w), 0)
                     defxy = tmp[d // 2: -(d // 2 + d % 2)]
                 else:
                     d = h - w
-                    tmp = resize(defxy, (h, h))
+                    tmp = resize(defxy, (h, h), 0)
                     defxy = tmp[:, d // 2: -(d // 2 + d % 2)]
                 # ch, cw = h // 2, w // 2
                 # cr = min(h, w)
@@ -99,30 +115,51 @@ def save(seq, deformations, path, name):
                 # defxy = np.zeros((h, w, 2))
                 # defxy[ch - cr // 2:ch - cr // 2 + cr, cw - cr // 2: cw - cr//2 + cr] = tmp
             else:
-                defxy = resize(defxy, (h, w))
+                defxy = resize(defxy, (h, w), 0)
             print('Before ', defxy.min(), defxy.max())
             # defxy = np.stack([defx, defy], axis=-1)
-            if i != 1:
-                defxy = ff_1_to_k(new_def[i-1], defxy)
-
+            # prev_def_xy = defxy
+            defxy = ff_1_to_k(new_def[i-1], defxy)
+            # print((prev_def_xy == defxy).sum(), defxy.size)
             print('After ', defxy.min(), defxy.max())
             new_def.append(defxy)
+
             im_new = SP(torch.tensor(im[None, None, :, :] / 255, dtype=torch.float),
                         torch.tensor(defxy.transpose((2, 0, 1))[None], dtype=torch.float)).squeeze()
             im_new = np.uint8(im_new.numpy() * 255)
             # im_new = forward_warp(im, defxy)
             new_seq.append(im_new)
+
+
     io.imsave(path + name, np.array(new_seq, dtype='uint8'))
     np.save(path + '/deformations/' + name.split('.tif')[0], new_def)
+
+
+def show(moving, fixed, reg):
+    import cv2
+    mov = moving[0]*255#.squeeze().detach().cpu().numpy()*255
+    fix = fixed[0]*255#.squeeze().detach().cpu().numpy()*255
+    reg = reg[0]*255#.squeeze().detach().cpu().numpy()*255
+    im1 = np.zeros((256, 256, 3), dtype='uint8')
+    im2 = np.zeros_like(im1)
+    im1[:,:,0] = np.uint8(fix)
+    im2[:, :, 0] = np.uint8(fix)
+    im1[:, :, 1] = np.uint8(mov)
+    im2[:, :, 1] = np.uint8(reg)
+    im = np.concatenate([im1, im2], axis=1)
+    print(im.shape)
+    cv2.imwrite('test.jpg', im)
+    input()
 
 
 def predict(model_path, image_path, im_size, batch_size, save_path, is_2d=True):
 
     voxelmorph = DefNet(im_size[1:])
 
-    # voxelmorph = torch.nn.DataParallel(voxelmorph)
+    voxelmorph = torch.nn.DataParallel(voxelmorph)
     # voxelmorph.to('cuda')
-    voxelmorph.load_state_dict(torch.load(model_path))
+    voxelmorph.load_state_dict(torch.load(model_path))#['model_state_dict'])
+
     voxelmorph.cuda()
     voxelmorph.eval()
 
@@ -132,24 +169,29 @@ def predict(model_path, image_path, im_size, batch_size, save_path, is_2d=True):
     for file in filenames:
         defs = np.zeros(im_size + (2, ))
         seq = io.imread(file)
-        chunks = [seq[i:min(i + batch_size + 1, len(seq))] for i in range(0, len(seq)-1, batch_size)]
-        print(len(chunks), len(chunks[0]), len(seq), file)
+        # chunks = [seq[i:min(i + batch_size + 1, len(seq))] for i in range(0, len(seq)-1, batch_size)]
         first = True
         new_seq = []
-        for chunk in tqdm(chunks):
-            batch_fixed, batch_moving, imsizes = GetBatch(chunk, im_size)
+        fixed = preprocess_im(seq[0], im_size)
+        for i in tqdm(range(1, len(seq))):
+            moving =  preprocess_im(seq[i], im_size)
             if use_gpu:
-                batch_fixed = batch_fixed.cuda()
-                batch_moving = batch_moving.cuda()
-            registered, deformations = voxelmorph(batch_moving, batch_fixed)
+                fixed = fixed.cuda()
+                moving = moving.cuda()
+            registered, deformations = voxelmorph(moving, fixed)
+            registered = registered.detach().cpu().numpy()
+            fixed = fixed.detach().cpu().numpy()
+            deformations = deformations.detach().cpu().numpy()
+            show(moving.detach().cpu().numpy(), fixed, registered)
             if first:
-                new_seq = np.concatenate([batch_fixed[0].detach().cpu().numpy()[None],
-                                          registered.detach().cpu().numpy()], axis=0)
+                new_seq = np.concatenate([fixed[0][None], registered], axis=0)
                 first = False
             else:
-                new_seq = np.concatenate([new_seq, registered.detach().cpu().numpy()], axis=0)
-            # print(deformations.shape, defs.shape)
-            defs = np.concatenate([defs, deformations.detach().cpu().numpy().transpose((0, 2, 3, 1))], axis=0)
+                new_seq = np.concatenate([new_seq, registered], axis=0)
+            del fixed
+            del moving
+            fixed = torch.Tensor(registered)
+            defs = np.concatenate([defs, (deformations).transpose((0, 2, 3, 1))], axis=0)
         save(seq, defs, save_path, file.split('/')[-1])
         save256(new_seq, save_path + '/128/', file.split('/')[-1])
 
@@ -158,6 +200,10 @@ def predict(model_path, image_path, im_size, batch_size, save_path, is_2d=True):
 
 
 if __name__ == "__main__":
-    predict('/home/nadya/Projects/VoxelMorph/snapshots/saved_models_crosscor/vm_200',
-            '/home/nadya/Projects/VoxelMorph/data/', (1, 128, 128),
-            6, '/home/nadya/Projects/VoxelMorph/data/registered/result/cross_corr/')
+    predict('/data/sim/DefReg/snapshots/cross-corr/vm_90',
+            '/data/sim/Notebooks/VM/data/', (1, 256, 256),
+            1, '/data/sim/Notebooks/VM/data/registered/result/cross-corr/')
+
+    # predict('/data/sim/Notebooks/VM/snapshots/saved_models_def0.3/vm_180',
+    #         '/data/sim/Notebooks/VM/data/', (1, 128, 128),
+    #         1, '/data/sim/Notebooks/VM/data/registered/result/saved_models_def0.3/')

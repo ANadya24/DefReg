@@ -131,7 +131,7 @@ class DefNet(nn.Module):
         acts = self.encoder(x)
         x = self.decoder(acts)
         deform = self.deformation(x)
-        y = self.spatial_transform(src, deform*10.)
+        y = self.spatial_transform(src, deform)
         return y, deform
 
 

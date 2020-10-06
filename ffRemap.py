@@ -60,6 +60,7 @@ def ffremap2(def_prev, def_cur):
 
 
 def ff_1_to_k(ff_1_to_k_minus_1, ff_k_minus_1_to_k):
+    # new_def = ffremap2(ff_1_to_k_minus_1, ff_k_minus_1_to_k)
     new_def = ff_1_to_k_minus_1 + ffremap2(ff_1_to_k_minus_1, ff_k_minus_1_to_k)
     return new_def
 

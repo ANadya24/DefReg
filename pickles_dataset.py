@@ -116,6 +116,7 @@ class Dataset(data.Dataset):
             cr = min(h, w)
             deformation = deformation[ch-cr//2:ch+cr, cw-cr//2: cw+cr]
         deformation = resize(deformation, self.im_size)
+
         if self.smooth:
             deformation = ndimage.gaussian_filter(deformation, 0.5)
 
@@ -179,7 +180,7 @@ class Dataset(data.Dataset):
 
 
         moving_image = to_tensor(moving_image).float()
-        deformation = torch.Tensor(deformation).permute((2, 0, 1))/10.
+        deformation = torch.Tensor(deformation).permute((2, 0, 1))
         # print(deformation.shape)
         fixed_image = to_tensor(fixed_image).float()
 

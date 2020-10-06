@@ -5,10 +5,10 @@ from matplotlib import pyplot as plt
 from scipy import io as spio
 from skimage import io
 from glob import glob
-from ffRemap import *
 from scipy.ndimage import interpolation
 import pickle
 import cv2
+import os
 
 
 def adjust01(arr):
@@ -136,14 +136,15 @@ def plot_bef_aft(init_err, err, base_err, title='test', x_label='', y_label='', 
 
 
 if __name__ == "__main__":
-    prefix = 'bcw'
+    prefix = 'fwd'
+    model_name = 'cross-corr3'
     print('Doing ..', prefix)
-    sequences = glob('/home/nadya/Projects/VoxelMorph/data/*.tif')
+    sequences = glob('/data/sim/Notebooks/VM/data/*.tif')
     for seq_name in filter(lambda name: name.find('Seq') != -1, sequences):
         print(seq_name)
         # seq_name = '/home/nadya/Projects/VoxelMorph/data/SeqB1.tif'
         point_name = seq_name.split('.tif')[0] + '.mat'
-        subf = ('/').join(seq_name.split('/')[:-1]) + f'/registered/result/{prefix}/deformations/'
+        subf = ('/').join(seq_name.split('/')[:-1]) + f'/registered/result/{model_name}/deformations/'
         def_name = subf + seq_name.split('/')[-1].split('.tif')[0] + '.npy'
         images = io.imread(seq_name).astype('float')
         c, h, w = images.shape
@@ -179,10 +180,10 @@ if __name__ == "__main__":
         inner_err = np.zeros(len(images))
         line_err = np.zeros(len(images))
 
-        with open(f'/home/nadya/Projects/VoxelMorph/data/graphics/initial_data/elastic_method_{prefix}_' +
+        with open(f'/data/sim/Notebooks/VM/data/graphics/initial_data/elastic_method_{prefix}_' +
                 seq_name.split('/')[-1].split('.')[0], 'rb') as rd_f:
             elast_data = pickle.load(rd_f)
-        with open('/home/nadya/Projects/VoxelMorph/data/graphics/initial_data/unregistered_' +
+        with open('/data/sim/Notebooks/VM/data/graphics/initial_data/unregistered_' +
                 seq_name.split('/')[-1].split('.')[0], 'rb') as rd_f:
             initial_data = pickle.load(rd_f)
 
@@ -207,7 +208,7 @@ if __name__ == "__main__":
             line_p = lines[i]
 
             v = deformation[i]
-            v *= -1.
+            # v *= -1.
             def_b_p = WarpCoords(b_p[None], v[None], (1, in_sh[1], in_sh[2]))[0]
             def_in_p = WarpCoords(in_p[None], v[None], (1, in_sh[1], in_sh[2]))[0]
             def_line_p = WarpCoords(line_p[None], v[None], (1, in_sh[1], in_sh[2]))[0]
@@ -232,12 +233,13 @@ if __name__ == "__main__":
         print('line_init_err ', np.mean(line_init_err))
         print('base_line_err ', np.mean(base_line_err))
         print('line_err ', np.mean(line_err))
+        os.makedirs(f'/data/sim/Notebooks/VM/data/graphics/{model_name}/', exist_ok=True)
         plot_bef_aft(init_err, bound_err, base_bound_err, 'Bound points', 'Time', 'Error',
-                     f'/home/nadya/Projects/VoxelMorph/data/graphics/{prefix}/' + seq_name.split('/')[-1].split('.tif')[0] +
+                     f'/data/sim/Notebooks/VM/data/graphics/{model_name}/' + seq_name.split('/')[-1].split('.tif')[0] +
                      ' bound_points_error.jpg')
         plot_bef_aft(initin_err, inner_err, base_inner_err, 'Inner points', 'Time', 'Error',
-                     f'/home/nadya/Projects/VoxelMorph/data/graphics/{prefix}/' + seq_name.split('/')[-1].split('.tif')[0] +
+                     f'/data/sim/Notebooks/VM/data/graphics/{model_name}/' + seq_name.split('/')[-1].split('.tif')[0] +
                      ' inner_points_error.jpg')
         plot_bef_aft(line_init_err, line_err, base_line_err, 'Lines', 'Time', 'Error',
-                     f'/home/nadya/Projects/VoxelMorph/data/graphics/{prefix}/' + seq_name.split('/')[-1].split('.tif')[0] +
+                     f'/data/sim/Notebooks/VM/data/graphics/{model_name}/' + seq_name.split('/')[-1].split('.tif')[0] +
                      ' lines_error.jpg')

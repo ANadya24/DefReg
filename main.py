@@ -4,7 +4,7 @@ from torch import optim, nn
 from glob import glob
 import time
 from pickles_dataset import Dataset
-from model import DefNet
+from model_vm import DefNet
 from voxelmorph import cvpr2018_net
 from sklearn.model_selection import train_test_split
 from train import train
@@ -36,6 +36,7 @@ if __name__ == "__main__":
     model_path = config["model_path"]
     lr = config["learning_rate"]
     sm_lambda = config["smooth"]
+    def_lambda = config["def_lambda"]
     use_mask = config["masks"]
     data_shape = config["data_shape"]
     num_workers = config["num_workers"]
@@ -116,8 +117,8 @@ if __name__ == "__main__":
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     device = torch.device("cuda" if use_gpu else "cpu")
 
-    total_loss = construct_loss(["ssim"], weights=[1.], sm_lambda=0.,
-                                use_gpu=use_gpu, n=9, def_lambda=0.0)
+    total_loss = construct_loss(["cross-corr"], weights=[1.], sm_lambda=sm_lambda,
+                                use_gpu=use_gpu, n=9, def_lambda=def_lambda)
     # if load_epoch:
     #     total_loss = checkpoint['loss']
 
