@@ -36,6 +36,11 @@ def WarpCoords(poi, V, out_size):
     num_batch = out_size[0]
     out_height = out_size[1]
     out_width = out_size[2]
+    # V = np.pad(V, ((0,0), (1,1), (1,1), (0,0)))
+    # out_height = V.shape[1]
+    # out_width = V.shape[2]
+    # poi[:, :, 0] = poi[:, :, 0] + 1
+    # poi[:, :, 1] = poi[:, :, 1] + 1
 
     V = np.transpose(V, [0, 3, 1, 2])  # [n, 2, h, w]
     cy = poi[:, :, 1] - np.floor(poi[:, :, 1])
@@ -160,13 +165,14 @@ def draw(img, points, lens, color):
 DRAW_POINTS = True
 
 if __name__ == "__main__":
-    prefix = 'bcw'
-    sequences = glob('./VoxelMorph/data/*.tif')
+    prefix = 'fwd'
+    model_name = 'ssim1'
+    sequences = glob('/data/sim/Notebooks/VM/data/*1.tif')
     for seq_name in filter(lambda name: name.find('Seq') != -1, sequences):
         print(seq_name)
         # seq_name = '/home/nadya/Projects/VoxelMorph/data/SeqB1.tif'
         point_name = seq_name.split('.tif')[0] + '.mat'
-        subf = ('/').join(seq_name.split('/')[:-1]) + f'/registered/result/{prefix}/deformations/'
+        subf = ('/').join(seq_name.split('/')[:-1]) + f'/registered/result/{model_name}/deformations/'
         def_name = subf + seq_name.split('/')[-1].split('.tif')[0] + '.npy'
         images = io.imread(seq_name).astype('float')
         c, h, w = images.shape
@@ -195,8 +201,8 @@ if __name__ == "__main__":
         lines = np.concatenate((line1, line2, line3, line4), axis=1)
 
         if DRAW_POINTS:
-            seq_name_elast = '/home/nadya/Projects/VoxelMorph/data/viz/fwd/check/elastic/' + seq_name.split('/')[-1]
-            seq_name_prop = '/home/nadya/Projects/VoxelMorph/data/viz/fwd/check/proposed/' + seq_name.split('/')[-1]
+            seq_name_elast = '/data/sim/Notebooks/VM/data/viz/fwd/check/elastic/' + seq_name.split('/')[-1]
+            seq_name_prop = '/data/sim/Notebooks/VM/data/viz/fwd/check/proposed/init_' + seq_name.split('/')[-1]
             seq_init = io.imread(seq_name)
             seq_init = np.stack([seq_init, seq_init, seq_init], -1)
             seq_init[0] = draw(seq_init[0], (bound[0], inner[0], lines[0]), (len1, len2, len3, len4), (255, 255, 255))
@@ -211,11 +217,10 @@ if __name__ == "__main__":
             # print('bseq shape', bseq.shape)
             bseq = np.stack([bseq, bseq, bseq], -1)
             base_seq = [draw(bseq[0], (bound[0], inner[0], lines[0]), (len1, len2, len3, len4), (0, 0, 255))]
-
         in_sh = images.shape
 
         init_def = None
-
+        init_def_v = None
         for i in range(1, len(images)):
             b_p = bound[i]
             in_p = inner[i]
@@ -226,11 +231,14 @@ if __name__ == "__main__":
 
             if i != 1:
                 base_v = ff_1_to_k(init_def, base_v)
+                v = ff_1_to_k(init_def_v, v)
             init_def = base_v.copy()
+            init_def_v = v.copy()
+            print(v.min(), v.max(), base_v.min(), base_v.max())
 
             if prefix == 'fwd':
                 base_v *= -1.
-            v *= -1.
+                v *= -1.
 
             def_b_p = WarpCoords(b_p[None], v[None], (1, in_sh[1], in_sh[2]))[0]
             def_in_p = WarpCoords(in_p[None], v[None], (1, in_sh[1], in_sh[2]))[0]
@@ -242,18 +250,18 @@ if __name__ == "__main__":
 
             if DRAW_POINTS:
                 seq_draw = draw(seq[i], (def_b_p, def_in_p, def_line_p), (len1, len2, len3, len4), (255, 0, 0))
-                seq_draw = draw(seq_draw, (bound[0], inner[0], lines[0]), (len1, len2, len3, len4), (0, 255, 255))
+                # seq_draw = draw(seq_draw, (bound[0], inner[0], lines[0]), (len1, len2, len3, len4), (0, 255, 255))
                 our_seq.append(seq_draw)
                 seq_draw = draw(bseq[i], (base_b_p, base_in_p, base_line_p), (len1, len2, len3, len4), (0, 0, 255))
-                seq_draw = draw(seq_draw, (bound[0], inner[0], lines[0]), (len1, len2, len3, len4), (0, 255, 255))
+                # seq_draw = draw(seq_draw, (bound[0], inner[0], lines[0]), (len1, len2, len3, len4), (0, 255, 255))
                 base_seq.append(seq_draw)
                 seq_init[i] = draw(seq_init[i], (bound[i], inner[i], lines[i]), (len1, len2, len3, len4), (255, 255, 255))
 
 
 
         if DRAW_POINTS:
-            io.imsave(f'/home/nadya/Projects/VoxelMorph/data/viz/{prefix}/init_' + seq_name.split('/')[-1], seq_init)
-            io.imsave(f'/home/nadya/Projects/VoxelMorph/data/viz/{prefix}/prop_' + seq_name.split('/')[-1],
+            io.imsave(f'/data/sim/Notebooks/VM/data/viz/{prefix}/init_' + seq_name.split('/')[-1], seq_init)
+            io.imsave(f'/data/sim/Notebooks/VM/data/viz/{prefix}/prop_' + seq_name.split('/')[-1],
                       np.array(our_seq))
-            io.imsave(f'/home/nadya/Projects/VoxelMorph/data/viz/{prefix}/elastic_' + seq_name.split('/')[-1],
+            io.imsave(f'/data/sim/Notebooks/VM/data/viz/{prefix}/elastic_' + seq_name.split('/')[-1],
                       np.array(base_seq))

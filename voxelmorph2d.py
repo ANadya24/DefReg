@@ -218,6 +218,7 @@ class SpatialTransformation(nn.Module):
         return output
 
     def forward(self, moving_image, deformation_matrix):
+        moving_image = moving_image.permute(0,2,3,1)
         # print(moving_image.shape, deformation_matrix.shape)
         dx = deformation_matrix[:, 0, :, :]
         dy = deformation_matrix[:, 1, :, :]
@@ -231,7 +232,7 @@ class SpatialTransformation(nn.Module):
         x_new = dx + x_mesh
         y_new = dy + y_mesh
 
-        return self.interpolate(moving_image, x_new, y_new)
+        return self.interpolate(moving_image, x_new, y_new).permute(0,3,1,2)
 
 
 def init_weights(m):

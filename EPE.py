@@ -9,6 +9,7 @@ from scipy.ndimage import interpolation
 import pickle
 import cv2
 import os
+from ffRemap import *
 
 
 def adjust01(arr):
@@ -137,7 +138,7 @@ def plot_bef_aft(init_err, err, base_err, title='test', x_label='', y_label='', 
 
 if __name__ == "__main__":
     prefix = 'fwd'
-    model_name = 'cross-corr3'
+    model_name = 'cross-corr'
     print('Doing ..', prefix)
     sequences = glob('/data/sim/Notebooks/VM/data/*.tif')
     for seq_name in filter(lambda name: name.find('Seq') != -1, sequences):
@@ -200,15 +201,17 @@ if __name__ == "__main__":
         b3 = np.zeros(len(images))
         b4 = np.zeros(len(images))
 
-        init_def = None
-
+        init_def_v = None
         for i in range(1, len(images)):
             b_p = bound[i]
             in_p = inner[i]
             line_p = lines[i]
 
             v = deformation[i]
-            # v *= -1.
+            if i != 1:
+                v = ff_1_to_k(init_def_v, v)
+            init_def_v = v.copy()
+            v *= -1.
             def_b_p = WarpCoords(b_p[None], v[None], (1, in_sh[1], in_sh[2]))[0]
             def_in_p = WarpCoords(in_p[None], v[None], (1, in_sh[1], in_sh[2]))[0]
             def_line_p = WarpCoords(line_p[None], v[None], (1, in_sh[1], in_sh[2]))[0]

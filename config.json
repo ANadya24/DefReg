@@ -1,14 +1,14 @@
 {
     "data_path": "/data/sim/Notebooks/VM/dataset/train_set.pkl",
     "data_path_val": "/data/sim/Notebooks/VM/dataset/test_set.pkl",
-    "batch_size": 12,
+    "batch_size": 32,
     "num_epochs": 1001,
     "load_epoch": 0,
     "model_path": "/data/sim/DefReg/",
     "size_path": "/data/sim/DefReg/sizes.txt",
     "learning_rate": 1e-4,
-    "smooth": 0.1,
-    "def_lambda": 0.2,
+    "smooth": 0,
+    "def_lambda": 0.02,
     "masks": false,
     "data_shape": [
         1,
@@ -16,12 +16,12 @@
         256
     ],
     "num_workers": 4,
-    "save_dir": "/data/sim/DefReg/snapshots/cross-corr2/",
+    "save_dir": "/data/sim/DefReg/snapshots/cross-corr/",
     "save_step": 40,
-    "image_dir": "/data/sim/DefReg/snapshots/cross-corr2/val_images/",
-    "log_dir": "/data/sim/DefReg/snapshots/cross-corr2/logs/",
+    "image_dir": "/data/sim/DefReg/snapshots/cross-corr/val_images/",
+    "log_dir": "/data/sim/DefReg/snapshots/cross-corr/logs/",
     "model_name": "vm",
     "use_gpu": true,
     "tensorboard": true,
-    "comments": "не делим деформацию на число"
+    "comments": "метрика cross-corr"
 }

@@ -19,7 +19,6 @@ def ffremap(def_prev, def_cur):
 
 
 def ffremap2(def_prev, def_cur):
-
     h, w, _ = def_prev.shape
     x, y = np.meshgrid(np.arange(0, w), np.arange(0, h))
     x_grid = x + def_prev[:, :, 0]
@@ -27,7 +26,9 @@ def ffremap2(def_prev, def_cur):
     x_grid = np.clip(x_grid, 0, w-2)
     y_grid = np.clip(y_grid, 0, h-2)
     # y_grid = y_grid.reshape(-1, 1)
-
+    # def_cur = np.pad(def_cur, ((1, 1), (1, 1), (0, 0)))
+    # x_grid = x_grid + 1
+    # y_grid = y_grid + 1
     cy = y_grid - np.floor(y_grid)
     cx = x_grid - np.floor(x_grid)
     ix = np.floor(x_grid).astype('int')

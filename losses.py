@@ -135,7 +135,7 @@ def construct_loss(loss_names, weights=None, n=9, sm_lambda=0.01, use_gpu=False,
             loss.append(lambda x, y, dx, dy: sm_lambda * smooothing_loss(x))
         else:
             raise NameError(f"No loss function named {l}.")
-    return lambda x, y, dx, dy: sum(lo(x, y, dx, dy) for lo in loss)
+    return lambda x, y, dx, dy: [sum(lo(x, y, dx, dy) for lo in loss), sum(lo(x, y, dx, dy) for lo in loss[1:]), loss[0](x,y,dx,dy)]
 
 from sklearn.metrics import mutual_info_score
 # x = torch.randn((12, 1, 256, 256), requires_grad=True)

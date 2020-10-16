@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
 from torch.distributions.normal import Normal
-from voxelmorph import SpatialTransformer
+from voxelmorph2d import SpatialTransformation
 
 
 class Unet(nn.Module):
@@ -75,7 +75,6 @@ class Unet(nn.Module):
 
 class DefNet(nn.Module):
 
-
     def __init__(self, vol_size, enc_nf=[16, 32, 32, 32], dec_nf=[32, 32, 32, 32, 32, 16, 16], full_size=True):
         """
         Instiatiate 2018 model
@@ -99,15 +98,16 @@ class DefNet(nn.Module):
         self.flow.weight = nn.Parameter(nd.sample(self.flow.weight.shape))
         self.flow.bias = nn.Parameter(torch.zeros(self.flow.bias.shape))
 
-        self.spatial_transform = SpatialTransformer(vol_size)
+        self.spatial_transform = SpatialTransformation(True)
 
     def forward(self, src, tgt):
 
         x = torch.cat([src, tgt], dim=1)
         x = self.unet_model(x)
         flow = self.flow(x)
+        # print(src.shape, flow.shape)
         y = self.spatial_transform(src, flow)
-
+        # print(y.shape)
         return y, flow
 
 
