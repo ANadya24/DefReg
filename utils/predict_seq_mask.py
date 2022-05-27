@@ -9,7 +9,7 @@ import os
 from skimage.transform import resize
 from tqdm import tqdm
 from ffRemap import *
-from voxelmorph2d import SpatialTransformation, DefNet
+from src.voxelmorph2d import SpatialTransformation, DefNet
 
 use_gpu = torch.cuda.is_available()
 devices = ['cpu', 'cuda']

@@ -1,5 +1,5 @@
-import voxelmorph2d as vm2d
-import voxelmorph3d as vm3d
+import src.voxelmorph2d as vm2d
+import src.voxelmorph3d as vm3d
 import torch
 import torchvision
 import numpy as np

@@ -1,4 +1,4 @@
-from model_vm import DefNet
+from src.model_vm import DefNet
 import torch
 import torchvision
 import numpy as np
@@ -10,7 +10,7 @@ import os
 from skimage.transform import resize
 from tqdm import tqdm
 from ffRemap import *
-from voxelmorph2d import SpatialTransformation
+from src.voxelmorph2d import SpatialTransformation
 
 use_gpu = torch.cuda.is_available()
 devices = ['cpu', 'cuda']

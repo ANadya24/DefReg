@@ -1,4 +1,4 @@
-import pytorch_ssim
+import src.pytorch_ssim
 import torch
 from torch.autograd import Variable
 from torch import optim

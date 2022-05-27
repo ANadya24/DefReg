@@ -1,5 +1,5 @@
-import voxelmorph2d as vm2d
-import voxelmorph3d as vm3d
+import src.voxelmorph2d as vm2d
+import src.voxelmorph3d as vm3d
 import torch
 import torchvision
 import numpy as np
@@ -87,7 +87,7 @@ def save(seq, deformations, path, name):
 
             print(defxy.min(), defxy.max())
             new_def.append(defxy)
-            from voxelmorph2d import SpatialTransformation
+            from src.voxelmorph2d import SpatialTransformation
             SP = SpatialTransformation()
             # print(im.max(), im[None, :, :, None].shape, defxy.shape)
             im_new = SP(torch.tensor(im[None, :, :, None]/255), torch.tensor(defxy[None])).squeeze()

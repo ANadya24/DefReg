@@ -3,7 +3,7 @@ import skimage
 import torch.nn.functional as F
 from scipy import ndimage
 import torch
-from voxelmorph2d import SpatialTransformation
+from src.voxelmorph2d import SpatialTransformation
 import cv2
 from glob import glob
 from skimage import io, transform
