@@ -25,7 +25,8 @@ def normalize_min_max(image: np.ndarray) -> np.ndarray:
 
 def normalize_mean_std(image: np.ndarray) -> np.ndarray:
     """Нормализация значений изображения путем стандартизации (вычитаем среднее и делим на стд отклонение)."""
-    image = (image - image.mean()) / image.std()
+    image = (image - image.mean()) 
+    image /= image.std()
     return image
 
 
@@ -34,9 +35,8 @@ def match_histograms(source_image: np.ndarray, reference_image: np.ndarray,
     """ Процедура histogram matching для соответствия интесивностей пары изображений."""
     source = source_image
     reference = reference_image
-    if random_switch and random.rand() < 0.5:
+    if random_switch and np.random.rand() < 0.5:
         source = reference_image
         reference = source_image
-
     matched = exposure.match_histograms(source, reference, multichannel=multichannel)
     return matched, reference
