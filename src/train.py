@@ -3,7 +3,6 @@ import torch.nn.functional as F
 import numpy as np
 import time
 from val_images import validate_images, validate_deformations
-from losses import dice_score
 import os
 from torch.utils.tensorboard import SummaryWriter
 import signal
@@ -12,35 +11,35 @@ import cv2
 
 
 def total_loss(reg, fixed, deform, gt_deform, diff):
-    l_im = cross_correlation_loss(reg[:, :1]*reg[:, 1:], fixed[:, :1]*fixed[:, 1:], n=9, use_gpu=True)#reg[:, :1], fixed[:, :1]
-    print('Correlation loss', l_im)
+#    l_crosscorr = cross_correlation_loss(reg[:, :1]*reg[:, 1:], fixed[:, :1]*fixed[:, 1:], n=9, use_gpu=True)
+    l_crosscorr = cross_correlation_loss(reg, fixed, n=9, use_gpu=True)
+    print('Correlation loss', l_crosscorr)
     
-    l_im2 = ssim_loss(reg[:, :1]*reg[:, 1:], fixed[:, :1]*fixed[:, 1:])
-    print('SSIM loss', l_im2)
-#    l_im2 = torch.sum((reg - fixed)**2, [1,2,3]).mean()
-#    print('MSE loss', l_im2)
+#    l_im2 = ssim_loss(reg[:, :1]*reg[:, 1:], fixed[:, :1]*fixed[:, 1:])
+#    l_ssim = ssim_loss(reg, fixed)
+#    print('SSIM loss', l_ssim)
 
-    l2dif = ssim_loss(diff[:, :1]*diff[:, 1:], fixed[:, :1]*fixed[:, 1:])
-#    l2dif = torch.sum(diff**2, [1,2,3]).mean()
-    print('ssim affine loss', l2dif)
 
+#    l_ssim_af = ssim_loss(diff[:, :1]*diff[:, 1:], fixed[:, :1]*fixed[:, 1:])
+#    l_ssim_af = ssim_loss(diff, fixed)
+#    print('SSIM affine loss', l_ssim_af)
+
+#    l_dice = dice_loss(reg[:, :1]*reg[:, 1:],  fixed[:, :1]*fixed[:, 1:])
+    l_dice = dice_loss(reg,  fixed)
+    print('Im dice loss', l_dice)
 #    if fixed.shape[1] > 1:
-        #print(reg.shape, reg[:,1:].max(), fixed[:,1:].max())
-    im_dice = dice_loss(reg[:, :1]*reg[:, 1:],  fixed[:, :1]*fixed[:, 1:])
-    print('Im dice loss', im_dice)
-    if fixed.shape[1] > 1:
-        mask_dice = dice_loss(reg[:, 1:], fixed[:, 1:])
-        print('Mask dice loss', mask_dice)
+#        mask_dice = dice_loss(reg[:, 1:], fixed[:, 1:])
+#        print('Mask dice loss', mask_dice)
 #    else:
-#        mask_dice = l_im*0
-#    l_def = L2Def(deform, gt_deform)
-#    print('Def loss', l_def)
+#        mask_dice = im_dice
+    l_def = L2Def(deform, gt_deform)
+    print('Def loss', l_def)
 #    l_smooth = smooothing_loss(reg)
     l_smooth = deformation_smoothness_loss(deform)
     print('Smooth loss', l_smooth)
     print()
-#    return l_im + im_dice + mask_dice + 0.01*l_def + 0.3*l_smooth, l_im, l_def #+ 0.025*l_def, l_im, l_def
-    return l_im + 0.8*l_im2 + im_dice + 200*l_smooth + 0.8*l2dif + mask_dice, l_im, l_im2
+    total_l = l_crosscorr + l_dice + 0.01*l_def + l_smooth
+    return total_l, l_crosscorr, l_def
 
 
 def train_model(model, optimizer, device, loss_func, save_step, image_dir,
