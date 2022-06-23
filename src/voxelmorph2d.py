@@ -84,9 +84,9 @@ class UNet(nn.Module):
                                 torch.nn.ReLU(),
                             )
         # Decode
-        self.conv_decode3 = self.expansive_block(256, 128, 64)
+        self.conv_decode3 = self.expansive_block(256, 128, 64)#64
         self.conv_decode2 = self.expansive_block(128, 64, 32)
-        self.final_layer = self.final_block(64, 32, out_channel)
+        self.final_layer = self.final_block(64, 32, out_channel)#64 32
 
     def crop_and_concat(self, upsampled, bypass, crop=False):
         """
@@ -130,9 +130,10 @@ class UNet(nn.Module):
 
 class SpatialTransformation(nn.Module):
 
-    def __init__(self, use_gpu=False):
+    def __init__(self, use_gpu=False, device=None):
 
         self.use_gpu = use_gpu
+        self.device = device
         super(SpatialTransformation, self).__init__()
 
     def meshgrid(self, height, width):
@@ -147,8 +148,12 @@ class SpatialTransformation(nn.Module):
         #print(x_t.dtype)
 
         if self.use_gpu:
-            x_t = x_t.cuda()
-            y_t = y_t.cuda()
+            if self.device is not None:
+                x_t = x_t.to(self.device)
+                y_t = y_t.to(self.device)
+            else:
+                x_t = x_t.cuda()
+                y_t = y_t.cuda()
 
         return x_t, y_t
 
@@ -160,7 +165,10 @@ class SpatialTransformation(nn.Module):
         x = torch.matmul(torch.reshape(x, (-1, 1)), rep)
 
         if self.use_gpu:
-            x = x.cuda()
+            if self.device is not None:
+                x = x.to(self.device)
+            else:
+                x = x.cuda()
 
         return torch.squeeze(torch.reshape(x, (-1, 1)))
 
@@ -256,7 +264,7 @@ def init_weights(m):
 
 class VoxelMorph2d(nn.Module):
     
-    def __init__(self, in_channels, use_gpu=True):
+    def __init__(self, in_channels, use_gpu=True, device=None):
         super(VoxelMorph2d, self).__init__()
         
         #################################
@@ -289,15 +297,21 @@ class VoxelMorph2d(nn.Module):
         self.unet.apply(init_weights)
                                               
         if use_gpu:
-            self.localization = self.localization.cuda()
-            self.fc_loc = self.fc_loc.cuda()
-            self.unet = self.unet.cuda()
-            self.spatial_transform = self.spatial_transform.cuda()
+            if device is not None:
+                self.localization = self.localization.to(device)
+                self.fc_loc = self.fc_loc.to(device)
+                self.unet = self.unet.to(device)
+                self.spatial_transform = self.spatial_transform.to(device)
+            else:
+                self.localization = self.localization.cuda()
+                self.fc_loc = self.fc_loc.cuda()
+                self.unet = self.unet.cuda()
+                self.spatial_transform = self.spatial_transform.cuda()
     
     def stn(self, x, y):
         z = torch.cat([y, x], dim=1)
         xs = self.localization(z)
-#        print(xs.shape)
+
         xs = xs.view(-1, 27*27*10)
         theta = self.fc_loc(xs)
         theta = theta.view(-1, 2, 3)
@@ -315,7 +329,9 @@ class VoxelMorph2d(nn.Module):
         x = torch.cat([moving_image, fixed_image], dim=1)
         #        print(x.shape)
         deformation_matrix = self.unet(x)
-        # print("def", deformation_matrix.shape)
+        
+#         deformation_matrix = F.upsample(deformation_matrix, scale_factor=2, mode='bilinear')
+#         print("def", deformation_matrix.shape)
         # print("Def:", deformation_matrix.detach().cpu().numpy().max(), deformation_matrix.detach().cpu().numpy().min())
         registered_image = self.spatial_transform(moving_image, deformation_matrix)
                                                   
@@ -323,7 +339,7 @@ class VoxelMorph2d(nn.Module):
 
 class DefNet(nn.Module):
 
-    def __init__(self, vol_size, use_gpu=True, in_channel=4):
+    def __init__(self, vol_size, use_gpu=True, in_channel=4, device=None):
         """
         Instiatiate 2018 model
             :param vol_size: volume size of the atlas
@@ -335,7 +351,7 @@ class DefNet(nn.Module):
 
         self.unet_model = UNet(in_channel, 2)
 
-        self.spatial_transform = SpatialTransformation(use_gpu)
+        self.spatial_transform = SpatialTransformation(use_gpu, device)
 
     def forward(self, src, tgt):
         x = torch.cat([src, tgt], dim=1)

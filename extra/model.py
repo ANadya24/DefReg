@@ -27,7 +27,7 @@ class VoxelMorph:
         else:
             self.vm = vm3d
             self.voxelmorph = vm3d.VoxelMorph3d(input_dims[0] * 2, use_gpu)
-            
+
         if load_epoch:
             self.voxelmorph.load_state_dict(torch.load(model_path + f'vm_{load_epoch}'))
         # else:

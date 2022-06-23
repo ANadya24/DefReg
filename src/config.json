@@ -1,12 +1,12 @@
 {
     "data_path": "/data/sim/Notebooks/VM/dataset/train_set.pkl",
     "data_path_val": "/data/sim/Notebooks/VM/dataset/test_set.pkl",
-    "batch_size": 20,
+    "batch_size": 22,
     "num_epochs": 2000,
     "load_epoch": 0,
-    "model_path": "/data/sim/DefReg/snapshots/1201/vm_150",
-    "size_path": "/data/sim/DefReg/sizes.txt",
-    "learning_rate": 5e-4,
+    "model_path": "/data/sim/DefReg/snapshots/1102/vm_150",
+    "size_path": "/data/sim/DefReg/code/src/sizes.txt",
+    "learning_rate": 1e-3,
     "smooth": 0,
     "def_lambda": 0.02,
     "masks": false,
@@ -16,12 +16,12 @@
         256
     ],
     "num_workers": 4,
-    "save_dir": "/data/sim/DefReg/snapshots/1201/",
-    "save_step": 20,
-    "image_dir": "/data/sim/DefReg/snapshots/1201/val_images/",
-    "log_dir": "/data/sim/DefReg/snapshots/1201/logs/",
+    "save_dir": "/data/sim/DefReg/snapshots/1102/",
+    "save_step": 40,
+    "image_dir": "/data/sim/DefReg/snapshots/1102/val_images/",
+    "log_dir": "/data/sim/DefReg/snapshots/1102/logs/",
     "model_name": "vm",
     "use_gpu": true,
     "tensorboard": true,
-    "comments": "fpn, l_im + 0.01*l_im2 + im_dice + 0.01*l_def + 0.3*l_smooth + 0.01*l2dif+mask_dice, img*mask, median картинок 1.2, aug - отражения"
+    "comments": ""
 }

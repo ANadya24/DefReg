@@ -5,7 +5,7 @@ from glob import glob
 import time
 from pickles_dataset import Dataset
 from voxelmorph2d import DefNet, VoxelMorph2d
-from voxelmorph import cvpr2018_net
+#from voxelmorph import cvpr2018_net
 from sklearn.model_selection import train_test_split
 from train import train
 from losses import *
@@ -15,6 +15,22 @@ import json
 import shutil
 
 use_gpu = torch.cuda.is_available()
+
+def copytree(src, dst, symlinks=False, ignore=None):
+    os.makedirs(dst, exist_ok=True)
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.exists(d):
+            try:
+                shutil.rmtree(d)
+            except Exception as e:
+                print(e)
+                os.unlink(d)
+        if os.path.isdir(s):
+            shutil.copytree(s, d, symlinks, ignore)
+        else:
+            shutil.copy2(s, d)
 
 
 def parse_args():
@@ -45,7 +61,8 @@ if __name__ == "__main__":
     logdir = config["log_dir"]
     if not os.path.exists(save_dir):
         os.makedirs(save_dir, exist_ok=True)
-        shutil.copy(args.config_file, save_dir + args.config_file.split('/')[-1])
+    shutil.copy(args.config_file, save_dir + args.config_file.split('/')[-1])
+    copytree('/data/sim/DefReg/code/src/', save_dir + '/src/')
     save_step = config["save_step"]
     image_dir = config["image_dir"]
     model_name = config["model_name"]
@@ -66,7 +83,7 @@ if __name__ == "__main__":
     #     raise ValueError("Not yet implemented!")
 
 #    vm = DefNet(data_shape[1:])#cvpr2018_net(data_shape[1:], nf_enc, nf_dec)
-    vm = VoxelMorph2d(4)
+    vm = VoxelMorph2d(2)
 
     if load_epoch:
         checkpoint = torch.load(model_path)
@@ -96,7 +113,7 @@ if __name__ == "__main__":
     # training_set = Dataset(partition['train'], data_shape[1:],
     #                        use_mask=use_mask, size_file=data_dir+'sizes.txt')
     training_set = Dataset(data_path, data_shape, size_file= size_path,
-                        smooth=True, train=True, shuffle=True, use_mul=False)
+                        smooth=True, train=True, shuffle=True, use_mul=True)
     print("Length of train set", len(training_set))
     params = {'batch_size': batch_size,
               'shuffle': True,
@@ -109,7 +126,7 @@ if __name__ == "__main__":
               'num_workers': num_workers,
               'pin_memory': True}
     validation_set = Dataset(data_path_val, data_shape, size_file= size_path,
-                        smooth=True, train=False, shuffle=False, use_mul=False)
+                        smooth=True, train=False, shuffle=False, use_mul=True)
     validation_generator = data.DataLoader(validation_set, **params)
     print("Length of validation set", len(validation_set))
 
