@@ -18,7 +18,7 @@ class DefRegNet(nn.Module):
 
         #################################
         self.localization = nn.Sequential(
-            nn.Conv2d(in_channels, 6, kernel_size=(7, 7)),
+            nn.Conv2d(in_channels*2, 6, kernel_size=(7, 7)),
             nn.MaxPool2d(2, stride=2),
             nn.ReLU(True),
             nn.Conv2d(6, 10, kernel_size=(5, 5)),
@@ -37,7 +37,7 @@ class DefRegNet(nn.Module):
         self.fc_loc[2].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
         ####################################################################
 
-        self.unet = UNet(in_channels, 2)
+        self.unet = UNet(in_channels*2, 2)
         self.spatial_transform = SpatialTransformation(device=device)
         self.unet.apply(init_weights)
 

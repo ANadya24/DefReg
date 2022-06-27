@@ -32,7 +32,6 @@ expdir: ../DefReg/src
 load_epoch: 0
 logdir: ../DefReg/logs/test_exp
 model:
-  device: cpu
   image_size: 128
   in_channels: 1
   model_name: DefRegNet

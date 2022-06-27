@@ -116,6 +116,7 @@ class SpatialTransformation(nn.Module):
 
         x_mesh = x_mesh.expand([batch_size, height, width])
         y_mesh = y_mesh.expand([batch_size, height, width])
+
         x_new = dx + x_mesh
         y_new = dy + y_mesh
 

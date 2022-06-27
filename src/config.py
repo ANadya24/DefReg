@@ -8,7 +8,6 @@ class ModelConfig(BaseModel):
     model_name: str
     in_channels: int = 1
     image_size: int = 128
-    device: str = 'cpu'
 
 
 class DatasetConfig(BaseModel):

@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     model_args = config.model.dict()
     model_args.pop('model_name')
-    model = getattr(models, model_name)(**model_args)
+    model = getattr(models, model_name)(device=config.device, **model_args)
 
     checkpoint = None
     if config.load_epoch:

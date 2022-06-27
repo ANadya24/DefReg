@@ -8,6 +8,8 @@ import albumentations as A
 from utils.data_process import pad_image, match_histograms, normalize_mean_std
 
 
+MAX_LINE_LEN = 1300
+
 class Dataset(data.Dataset):
     def __init__(self, image_sequences, image_keypoints,
                  im_size=(1, 256, 256),
@@ -52,8 +54,8 @@ class Dataset(data.Dataset):
 
             if keypoint_path == '':
                 self.image_keypoints.append({'inner': np.zeros((len(seq), 4, 2)),
-                                             'bound': np.zeros((len(seq), 4, 2)),
-                                             'lines': (np.zeros((len(seq), 1000, 2)), np.ones((len(seq), 4)))})
+                                             'bound': np.zeros((len(seq), 8, 2)),
+                                             'lines': (np.zeros((len(seq), MAX_LINE_LEN, 2)), [1, 1, 1, 1])})
             else:
                 poi = spio.loadmat(keypoint_path)
                 bound = np.stack(poi['spotsB'][0].squeeze())
@@ -73,7 +75,7 @@ class Dataset(data.Dataset):
                 len4 = len(line4[0])
 
                 lines = np.concatenate((line1, line2, line3, line4), axis=1)
-                lines = np.pad(lines, np.array([0, 0, 0, 1000 - lines.shape[1], 0, 0]).reshape(-1, 2))
+                lines = np.pad(lines, np.array([0, 0, 0, MAX_LINE_LEN - lines.shape[1], 0, 0]).reshape(-1, 2))
                 lines_lengths = np.array([len1, len2, len3, len4])
                 self.image_keypoints.append({'inner': inner, 'bound': bound, 'lines': (lines, lines_lengths)})
 
@@ -99,10 +101,10 @@ class Dataset(data.Dataset):
             self.aug_pipe = A.Compose([A.OneOf([A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1),
                                                 # A.RandomResizedCrop(self.im_size[1], self.im_size[0]),
                                                 A.ShiftScaleRotate(shift_limit=0.0225, scale_limit=0.1,
-                                                                   rotate_limit=30)], p=0.2)],
+                                                                   rotate_limit=5)], p=0.2)],
                                       additional_targets={'image2': 'image', 'keypoints2': 'keypoints',
                                                           'mask2': 'mask'},
-                                      keypoint_params=A.KeypointParams(format='xy', remove_invisible=True))
+                                      keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
 
         self.to_tensor = ToTensor()
         self.resize = A.Compose([A.Resize(*self.im_size)],
@@ -136,7 +138,7 @@ class Dataset(data.Dataset):
         if self.use_masks:
             mask1 = self.image_masks[seq_idx][it].squeeze()
             mask2 = self.image_masks[seq_idx][it2].squeeze()
-
+        
         inner1 = np.array(self.image_keypoints[seq_idx]['inner'][it]).reshape(-1, 2)
         inner2 = np.array(self.image_keypoints[seq_idx]['inner'][it2]).reshape(-1, 2)
         bound1 = np.array(self.image_keypoints[seq_idx]['bound'][it]).reshape(-1, 2)
@@ -225,15 +227,17 @@ class Dataset(data.Dataset):
                 points1[:, 1] = h - 1 - points1[:, 1]
                 points2[:, 1] = h - 1 - points2[:, 1]
             if self.use_masks:
-                data = self.aug_pipe(image=image1, mask=mask1, keypoints=points1,
-                                     image2=image2, mask2=mask2, keypoints2=points2, )
-                image1, points1, mask1 = data['image'], np.array(data['keypoints']), data['mask']
-                image2, points2, mask2 = data['image2'], np.array(data['keypoints2']), data['mask2']
+                data = self.aug_pipe(image=image1.astype(np.float32), 
+                                     mask=mask1.astype(np.float32), keypoints=points1,
+                                     image2=image2.astype(np.float32), 
+                                     mask2=mask2.astype(np.float32), keypoints2=points2)
+                image1, points1, mask1 = data['image'], np.array(data['keypoints'], dtype=np.float32), data['mask']
+                image2, points2, mask2 = data['image2'], np.array(data['keypoints2'], dtype=np.float32), data['mask2']
             else:
-                data = self.aug_pipe(image=image1, keypoints=points1,
-                                     image2=image2, keypoints2=points2, )
-                image1, points1 = data['image'], np.array(data['keypoints'])
-                image2, points2 = data['image2'], np.array(data['keypoints2'])
+                data = self.aug_pipe(image=image1.astype(np.float32), keypoints=points1,
+                                     image2=image2.astype(np.float32), keypoints2=points2)
+                image1, points1 = data['image'], np.array(data['keypoints'], dtype=np.float32)
+                image2, points2 = data['image2'], np.array(data['keypoints2'], dtype=np.float32)
 
         image1 = self.to_tensor(image1).float()
         image2 = self.to_tensor(image2).float()
@@ -247,4 +251,4 @@ class Dataset(data.Dataset):
         # points2[:, 0] /= self.im_size[1]
         # points2[:, 1] /= self.im_size[0]
 
-        return image1, image2, points1, points2, points_len
+        return image1, image2, points1, points2, points_len.astype(np.int32)
