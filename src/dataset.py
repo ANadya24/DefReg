@@ -53,7 +53,7 @@ class Dataset(data.Dataset):
             if keypoint_path == '':
                 self.image_keypoints.append({'inner': np.zeros((len(seq), 4, 2)),
                                              'bound': np.zeros((len(seq), 4, 2)),
-                                             'lines': (np.zeros((len(seq), 4, 2)), np.ones((len(seq), 4)))})
+                                             'lines': (np.zeros((len(seq), 1000, 2)), np.ones((len(seq), 4)))})
             else:
                 poi = spio.loadmat(keypoint_path)
                 bound = np.stack(poi['spotsB'][0].squeeze())
@@ -73,6 +73,7 @@ class Dataset(data.Dataset):
                 len4 = len(line4[0])
 
                 lines = np.concatenate((line1, line2, line3, line4), axis=1)
+                lines = np.pad(lines, np.array([0, 0, 0, 1000 - lines.shape[1], 0, 0]).reshape(-1, 2))
                 lines_lengths = np.array([len1, len2, len3, len4])
                 self.image_keypoints.append({'inner': inner, 'bound': bound, 'lines': (lines, lines_lengths)})
 
@@ -96,7 +97,7 @@ class Dataset(data.Dataset):
 
         if self.train:
             self.aug_pipe = A.Compose([A.OneOf([A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1),
-                                                # A.RandomResizedCrop(self.im_size[-2], self.im_size[-1]),
+                                                # A.RandomResizedCrop(self.im_size[1], self.im_size[0]),
                                                 A.ShiftScaleRotate(shift_limit=0.0225, scale_limit=0.1,
                                                                    rotate_limit=30)], p=0.2)],
                                       additional_targets={'image2': 'image', 'keypoints2': 'keypoints',

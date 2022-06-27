@@ -100,7 +100,7 @@ def calculate_point_metrics(batch_points1: Union[torch.Tensor, np.ndarray],
 
         lines1 = points1[points_len[1]:]
         lines2 = points2[points_len[1]:]
-        len1, len2, len3, _ = points_len[2:]
+        len1, len2, len3, len4 = points_len[2:]
 
         inner_err = ((((inner1 - inner2) ** 2).sum(axis=1)) ** 0.5).sum(axis=0) / float(inner1.shape[1])
 
@@ -110,7 +110,8 @@ def calculate_point_metrics(batch_points1: Union[torch.Tensor, np.ndarray],
         b2 = frechetDist(lines1[len1:len1 + len2], lines2[len1:len1 + len2])
         b3 = frechetDist(lines1[len1 + len2:len1 + len2 + len3],
                          lines2[len1 + len2:len1 + len2 + len3])
-        b4 = frechetDist(lines1[len1 + len2 + len3:], lines2[len1 + len2 + len3:])
+        b4 = frechetDist(lines1[len1 + len2 + len3:len1 + len2 + len3 + len4],
+                         lines2[len1 + len2 + len3:len1 + len2 + len3 + len4])
         line_err = (b1 + b2 + b3 + b4) / 4.
         err['inner'].append(inner_err)
         err['bound'].append(bound_err)
