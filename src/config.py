@@ -16,7 +16,6 @@ class DatasetConfig(BaseModel):
     image_keypoints: List[str]
     im_size: Tuple[int, int, int] = (1, 256, 256)
     train: bool = True
-    shuffle: bool = False
     register_limit: Union[List[int], int] = 5
     use_masks: bool = True
     use_crop: bool = False
