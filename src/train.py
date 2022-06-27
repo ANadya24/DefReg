@@ -90,7 +90,6 @@ def calculate_point_metrics(batch_points1: Union[torch.Tensor, np.ndarray],
     err = defaultdict(list)
 
     for (points1, points2, points_len) in zip(batch_points1, batch_points2, batch_points_len):
-        print(points1.shape, points2.shape, points_len)
 
         inner1 = points1[:points_len[0]]
         inner2 = points2[:points_len[0]]
@@ -256,7 +255,7 @@ def train(model: torch.nn.Module,
 
             if use_tensorboard:
                 for key in batch_losses:
-                    summary_writer.add_scalar(key, 'val_' + batch_losses[key].item(), global_j)
+                    summary_writer.add_scalar('val_' + key, batch_losses[key].item(), global_j)
                 global_j += 1
 
         for key in val_losses:
