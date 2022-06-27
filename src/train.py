@@ -273,7 +273,8 @@ def train(model: torch.nn.Module,
             if key == 'total_loss':
                 continue
             print('Epoch', epoch + 1, f'{key} train/test: ', train_losses[key].item(), '/', val_losses[key].item())
-
+        
+        print()
         for key in val_metrics:
             print('Epoch', epoch + 1, f'{key} error: ', val_metrics[key].item())
 
@@ -281,6 +282,7 @@ def train(model: torch.nn.Module,
             if key not in best_metric_values or val_metrics[key] < best_metric_values[key]:
                 best_metric_values[key] = val_metrics[key]
                 save_model(model, model_name + f'_{key}')
+        print()
 
         # if (epoch + 1) % save_step == 0:
         #     save_model(model, model_name)

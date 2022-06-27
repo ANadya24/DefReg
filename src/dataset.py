@@ -5,7 +5,7 @@ from torch.utils import data
 from skimage import io, color
 from scipy import io as spio
 import albumentations as A
-from utils.data_process import pad_image, match_histograms, normalize_mean_std
+from utils.data_process import pad_image, match_histograms, normalize_mean_std, normalize_min_max
 
 MAX_LINE_LEN = 1300
 
@@ -103,13 +103,17 @@ class Dataset(data.Dataset):
                                                 # A.RandomResizedCrop(self.im_size[1], self.im_size[0]),
                                                 A.ShiftScaleRotate(shift_limit=0.0225, scale_limit=0.1,
                                                                    rotate_limit=5)], p=0.2)],
-                                      additional_targets={'image2': 'image', 'keypoints2': 'keypoints',
-                                                          'mask2': 'mask'},
-                                      keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
+                                      additional_targets={'image2': 'image',# 'keypoints2': 'keypoints',
+                                                          'mask2': 'mask'},)
+                                      #keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
 
         self.to_tensor = ToTensor()
-        self.resize = A.Compose([A.Resize(*self.im_size)],
-                                keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
+        
+        if self.train:
+            self.resize = A.Resize(*self.im_size)
+        else:                    
+            self.resize = A.Compose([A.Resize(*self.im_size)],
+                                    keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
 
     def __len__(self):
         return self.length
@@ -127,8 +131,10 @@ class Dataset(data.Dataset):
         image1 = self.image_sequences[seq_idx][it].squeeze().astype(np.float32)
         image2 = self.image_sequences[seq_idx][it2].squeeze().astype(np.float32)
 
-        image1 = normalize_mean_std(image1)
-        image2 = normalize_mean_std(image2)
+        # image1 = normalize_mean_std(image1)
+        # image2 = normalize_mean_std(image2)
+        image1 = normalize_min_max(image1)
+        image2 = normalize_min_max(image2)
 
         image1, image2, swap_flag = match_histograms(image1, image2, random_switch=self.train)
         if swap_flag:
