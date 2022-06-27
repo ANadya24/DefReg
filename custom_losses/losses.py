@@ -14,7 +14,7 @@ def cross_correlation(I, J, n, use_gpu=False):
     IJ = torch.mul(I, J)
     sum_filter = torch.ones((1, channels, n, n))
     if use_gpu:
-        sum_filter = sum_filter.cuda()
+        sum_filter = sum_filter.to(I.device)
     I_sum = torch.conv2d(I, sum_filter, padding=1, stride=(1, 1))
     J_sum = torch.conv2d(J, sum_filter, padding=1, stride=(1, 1))
     I2_sum = torch.conv2d(I2, sum_filter, padding=1, stride=(1, 1))

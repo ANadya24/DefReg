@@ -68,7 +68,10 @@ class CustomCriterion(nn.Module):
         losses2return = {}
         loss = 0
         for loss_function, loss_weight, loss_input, loss_name, return_flag in self.losses:
-            cur_loss = loss_function(*[input_dict[key] for key in loss_input])
+            input_values = {}
+            for key in loss_input:
+                input_values[key] = input_dict[loss_input[key]]
+            cur_loss = loss_function(**input_values)
             if return_flag:
                 losses2return[loss_name] = cur_loss
 
