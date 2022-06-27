@@ -7,7 +7,7 @@ from losses import (
     dice_loss,
     deformation_smoothness_loss
 )
-from src.config import LossConfig, CriterionConfig
+from src.config import CriterionConfig
 
 
 class CrossCorrelationLoss(nn.Module):
@@ -17,6 +17,10 @@ class CrossCorrelationLoss(nn.Module):
         self.use_gpu = use_gpu
 
     def forward(self, pred, target):
+        if pred.shape[1] == 2:
+            return cross_correlation_loss(pred[:, :1] * pred[:, 1:],
+                                          target[:, :1] * target[:, 1:],
+                                          n=self.n, use_gpu=self.use_gpu)
         return cross_correlation_loss(pred, target,
                                       n=self.n, use_gpu=self.use_gpu)
 
@@ -26,6 +30,9 @@ class SSIMLoss(nn.Module):
         super().__init__()
 
     def forward(self, pred, target):
+        if pred.shape[1] == 2:
+            return ssim_loss(pred[:, :1] * pred[:, 1:],
+                             target[:, :1] * target[:, 1:])
         return ssim_loss(pred, target)
 
 
@@ -34,6 +41,9 @@ class DiceLoss(nn.Module):
         super().__init__()
 
     def forward(self, pred, target):
+        if pred.shape[1] == 2:
+            return dice_loss(pred[:, :1] * pred[:, 1:],
+                             target[:, :1] * target[:, 1:])
         return dice_loss(pred, target)
 
 
