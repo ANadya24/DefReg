@@ -42,7 +42,7 @@ class CriterionConfig(BaseModel):
             weight=1.,
             input_keys={'pred': 'predicted_image',
                         'target': 'fixed_image'},
-            loss_parameters={'reduction': 'mean'})
+            loss_parameters={})
     ]
 
 

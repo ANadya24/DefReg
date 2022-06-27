@@ -9,6 +9,13 @@ criterion:
       reduction: mean
     return_loss: false
     weight: 1.0
+  - input_keys:
+      pred: predicted_image
+      target: fixed_image
+    loss_name: L1Loss
+    loss_parameters: {}
+    return_loss: false
+    weight: 1.0
 dataset:
   im_size: !!python/tuple
   - 1
@@ -21,9 +28,9 @@ dataset:
   use_crop: false
   use_masks: true
 device: cuda:0
-expdir: /Users/anshinan/asp_projects/DefReg/src
+expdir: ../DefReg/src
 load_epoch: 0
-logdir: /Users/anshinan/asp_projects/DefReg/logs/test_exp
+logdir: ../DefReg/logs/test_exp
 model:
   device: cpu
   image_size: 128
@@ -43,7 +50,7 @@ optimizer:
     eps: 1.0e-08
     weight_decay: 0
 save_step: 20
-savedir: /Users/anshinan/asp_projects/DefReg/logs/test_exp
+savedir: ../DefReg/logs/test_exp
 scheduler:
   name: ReduceLROnPlateau
   parameters:

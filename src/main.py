@@ -28,8 +28,10 @@ if __name__ == "__main__":
 
     if not os.path.exists(config.savedir):
         os.makedirs(config.savedir, exist_ok=True)
-        shutil.copy(args.config_file, config.savedir + args.config_file.split('/')[-1])
-        shutil.copytree(args.exp_dir, config.savedir + args.exp_dir.split('/')[-1])
+    shutil.copy(args.config_file, config.savedir + '/' + args.config_file.split('/')[-1])
+    if os.path.exists(config.savedir +  '/' + config.expdir.split('/')[-1]):
+        shutil.rmtree(config.savedir +  '/' + config.expdir.split('/')[-1])
+    shutil.copytree(config.expdir, config.savedir +  '/' + config.expdir.split('/')[-1], dirs_exist_ok=True)
 
     # загружаем модель
     model_name = config.model.model_name
@@ -87,12 +89,10 @@ if __name__ == "__main__":
 
     if config.scheduler is not None:
         scheduler = getattr(torch.optim.lr_scheduler,
-                            config.scheduler.name)(**config.scheduler.parameters)
-    else:
-        scheduler = None
+                            config.scheduler.name)(optimizer=optimizer, **config.scheduler.parameters)
 
     loss = CustomCriterion(config.criterion)
-
+    
     train(model=model, train_loader=training_generator,
           val_loader=validation_generator,
           optimizer=optimizer,

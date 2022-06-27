@@ -281,5 +281,5 @@ def train(model: torch.nn.Module,
                 best_metric_values[key] = val_metrics[key]
                 save_model(model, model_name + f'_{key}')
 
-        if (epoch + 1) % save_step == 0:
-            save_model(model, model_name)
+        # if (epoch + 1) % save_step == 0:
+        #     save_model(model, model_name)
