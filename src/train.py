@@ -172,6 +172,7 @@ def train(model: torch.nn.Module,
           max_epochs: int = 1000,
           use_tensorboard: bool = False,
           ):
+    
     def save_model(model, name=model_name + f'_stop'):
         if isinstance(model, torch.nn.DataParallel):
             torch.save({
@@ -229,9 +230,6 @@ def train(model: torch.nn.Module,
                     summary_writer.add_scalar(key, batch_losses[key].item(), global_i)
                 global_i += 1
 
-        if scheduler is not None:
-            scheduler.step()
-
         for key in train_losses:
             train_losses[key] /= total
 
@@ -266,6 +264,9 @@ def train(model: torch.nn.Module,
 
         for key in val_metrics:
             val_metrics[key] /= total
+        
+        if scheduler is not None:
+            scheduler.step(val_losses['total_loss'])
 
         print('Epoch', epoch + 1, 'train_loss/test_loss: ',
               train_losses['total_loss'], '/', val_losses['total_loss'])
