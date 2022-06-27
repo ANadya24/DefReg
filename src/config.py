@@ -30,12 +30,20 @@ class LossConfig(BaseModel):
 
 
 class CriterionConfig(BaseModel):
-    losses: List[LossConfig] = [LossConfig(
-        loss_name=torch.nn.MSELoss.__name__,
-        weight=1.,
-        input_keys={'pred': 'predicted_image',
-                    'target': 'fixed_image'},
-        loss_parameters={'reduction': 'mean'})]
+    losses: List[LossConfig] = [
+        LossConfig(
+            loss_name=torch.nn.MSELoss.__name__,
+            weight=1.,
+            input_keys={'pred': 'predicted_image',
+                        'target': 'fixed_image'},
+            loss_parameters={'reduction': 'mean'}),
+        LossConfig(
+            loss_name=torch.nn.L1Loss.__name__,
+            weight=1.,
+            input_keys={'pred': 'predicted_image',
+                        'target': 'fixed_image'},
+            loss_parameters={'reduction': 'mean'})
+    ]
 
 
 class SchedulerConfig(BaseModel):

@@ -1,7 +1,6 @@
-import torch
 from torch import nn
 import custom_losses
-from losses import (
+from custom_losses.losses import (
     cross_correlation_loss,
     ssim_loss,
     dice_loss,
