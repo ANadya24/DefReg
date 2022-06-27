@@ -3,8 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-from DefReg.basic_nets.spatial_transform import SpatialTransformation
-from DefReg.basic_nets.unet import UNet
+from basic_nets.spatial_transform import SpatialTransformation
+from basic_nets.unet import UNet
+from basic_nets.utils import init_weights
 
 
 class DefRegNet(nn.Module):
@@ -17,10 +18,10 @@ class DefRegNet(nn.Module):
 
         #################################
         self.localization = nn.Sequential(
-            nn.Conv2d(in_channels, 6, kernel_size=7),
+            nn.Conv2d(in_channels, 6, kernel_size=(7, 7)),
             nn.MaxPool2d(2, stride=2),
             nn.ReLU(True),
-            nn.Conv2d(6, 10, kernel_size=5),
+            nn.Conv2d(6, 10, kernel_size=(5, 5)),
             nn.MaxPool2d(2, stride=2),
             nn.ReLU(True)
         )
@@ -59,12 +60,16 @@ class DefRegNet(nn.Module):
 
         return y, theta
 
-    def forward(self, moving_image, fixed_image):
-        moving_image, theta = self.stn(fixed_image, moving_image)
-        diff = fixed_image - moving_image
-        x = torch.cat([moving_image, fixed_image], dim=1)
-        deformation_matrix = self.unet(x)
-        registered_image = self.spatial_transform(moving_image,
-                                                  deformation_matrix)
+    def forward(self, batch_moving, batch_fixed):
+        batch_moving, theta = self.stn(batch_fixed, batch_moving)
+        diff = batch_fixed - batch_moving
+        x = torch.cat([batch_moving, batch_fixed], dim=1)
+        batch_deformation = self.unet(x)
+        batch_registered = self.spatial_transform(batch_moving,
+                                                  batch_deformation)
 
-        return registered_image, deformation_matrix, theta, diff
+        output = {'batch_registered': batch_registered,
+                  'batch_deformation': batch_deformation,
+                  'theta': theta,
+                  'affine_trf_diff': diff}
+        return output

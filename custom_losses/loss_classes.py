@@ -1,0 +1,68 @@
+import torch
+from torch import nn
+import custom_losses
+from losses import (
+    cross_correlation_loss,
+    ssim_loss,
+    dice_loss,
+    deformation_smoothness_loss
+)
+from src.config import LossConfig, CriterionConfig
+
+
+class CrossCorrelationLoss(nn.Module):
+    def __init__(self, n=9, use_gpu=False):
+        super().__init__()
+        self.n = n
+        self.use_gpu = use_gpu
+
+    def forward(self, pred, target):
+        return cross_correlation_loss(pred, target,
+                                      n=self.n, use_gpu=self.use_gpu)
+
+
+class SSIMLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, pred, target):
+        return ssim_loss(pred, target)
+
+
+class DiceLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, pred, target):
+        return dice_loss(pred, target)
+
+
+class DeformationSmooth(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, pred):
+        return deformation_smoothness_loss(pred)
+
+
+class CustomCriterion(nn.Module):
+    def __init__(self, criterion_config: CriterionConfig):
+        super().__init__()
+        self.losses = []
+        self.input_keys = dict()
+
+        for loss in criterion_config.losses:
+            self.losses.append((getattr(custom_losses, loss.loss_name)(**loss.loss_parameters),
+                                loss.weight, loss.input_keys, loss.loss_name, loss.return_loss))
+
+    def forward(self, input_dict):
+        losses2return = {}
+        loss = 0
+        for loss_function, loss_weight, loss_input, loss_name, return_flag in self.losses:
+            cur_loss = loss_function(*[input_dict[key] for key in loss_input])
+            if return_flag:
+                losses2return[loss_name] = cur_loss
+
+            loss += loss_weight * cur_loss
+        losses2return['total_loss'] = loss
+        return losses2return

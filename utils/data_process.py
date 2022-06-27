@@ -31,12 +31,15 @@ def normalize_mean_std(image: np.ndarray) -> np.ndarray:
 
 
 def match_histograms(source_image: np.ndarray, reference_image: np.ndarray,
-                     multichannel: bool = False, random_switch: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+                     multichannel: bool = False, random_switch: bool = True) -> \
+        Tuple[np.ndarray, np.ndarray, bool]:
     """ Процедура histogram matching для соответствия интесивностей пары изображений."""
     source = source_image
     reference = reference_image
+    changed_position = False
     if random_switch and np.random.rand() < 0.5:
         source = reference_image
         reference = source_image
+        changed_position = True
     matched = exposure.match_histograms(source, reference, multichannel=multichannel)
-    return matched, reference
+    return matched, reference, changed_position

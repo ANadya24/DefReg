@@ -1,5 +1,3 @@
-from typing import Tuple
-import numpy as np
 import torch
 from torchvision.transforms import ToTensor
 from torch.utils import data
@@ -7,7 +5,7 @@ from skimage.transform import resize
 import pickle
 import cv2
 from utils.ffRemap import *
-from utils.data_process import pad_image, match_histograms, normalize_min_max, normalize_mean_std
+from utils.data_process import pad_image, normalize_min_max
 
 
 class Dataset(data.Dataset):
@@ -82,8 +80,7 @@ class Dataset(data.Dataset):
                     it2 -= 2
         else:
             it2 = min(it + 1, endSeq)
-        # print('iterators are', it, it2, seqID)
-        # it2 = it+1
+
         if it2 < it:
             tmp = it
             it = it2
@@ -96,7 +93,6 @@ class Dataset(data.Dataset):
             h, w = self.shape
 
         # Load data and get label
-        # fixed_image = io.imread(ID + '_1.jpg', as_gray=True)
         fixed_image = self.data[seqID]['imseq'][it].astype('uint8')
         if self.use_crop:
             x0 = np.random.randint(0, w - self.im_size[1])
@@ -107,31 +103,18 @@ class Dataset(data.Dataset):
                 fixed_image = pad_image(fixed_image, (0, w - h, 0, 0))
             else:
                 fixed_image = pad_image(fixed_image, (0, 0, 0, h - w))
-            # if h / w != 1.:
-            #     ch, cw = h//2, w//2
-            #     cr = min(h, w)
-            #     fixed_image = fixed_image[ch-cr//2:ch+cr, cw-cr//2: cw+cr]
             fixed_image = resize(fixed_image, self.im_size)
 
-        # print(fixed_image.shape, fixed_image.max(), fixed_image.min())
-
-        # moving_image = io.imread(ID + '_2.jpg', as_gray=True)
         moving_image = self.data[seqID]['imseq'][it2].astype('uint8')
-#        print('ya tut', moving_image.max())
         if self.use_crop:
             moving_image = moving_image[y0: y0 + self.im_size[0], x0:x0 + self.im_size[1]]
         else:
             if h < w:
-                moving_image = pad(moving_image, (0, w - h, 0, 0))
+                moving_image = pad_image(moving_image, (0, w - h, 0, 0))
             else:
-                moving_image = pad(moving_image, (0, 0, 0, h - w))
-            # if h / w != 1.:
-            #     ch, cw = h//2, w//2
-            #     cr = min(h, w)
-            #     moving_image = moving_image[ch-cr//2:ch+cr, cw-cr//2: cw+cr]
+                moving_image = pad_image(moving_image, (0, 0, 0, h - w))
             moving_image = resize(moving_image, self.im_size)
-            # print(moving_image.shape)
-        
+
         if self.use_masks:
             fixed_mask = self.masks[seqID]['imseq'][it].astype('uint8')
             if self.use_crop:
@@ -160,29 +143,18 @@ class Dataset(data.Dataset):
         else:
             deformation = self.data[seqID]['defs'][it + 1]
             for d in range(it + 2, it2 + 1):
-                # print(deformation.min(), deformation.max())
                 tmp = self.data[seqID]['defs'][d]
-#                if self.smooth:
-#                    tmp = ndimage.gaussian_filter(tmp, 0.1)
                 deformation = ff_1_to_k(deformation, tmp)
-        # print('deformation shape is', deformation.shape)
-        # deformation = deformation.transpose(1, 2, 0)
-        # if h / w != 1.:
-        #     ch, cw = h//2, w//2
-        #     cr = min(h, w)
-        #     deformation = deformation[ch-cr//2:ch+cr, cw-cr//2: cw+cr]
         if self.use_crop:
             deformation = deformation[y0: y0 + self.im_size[0], x0:x0 + self.im_size[1]]
         else:
             if h < w:
                 deformation = pad_image(deformation, (0, w - h, 0, 0, 0, 0))
             else:
-                deformation = pad(deformation, (0, 0, 0, h - w, 0, 0))
+                deformation = pad_image(deformation, (0, 0, 0, h - w, 0, 0))
 
             deformation = resize(deformation, self.im_size)
 
-#        if self.smooth:
-#            deformation = ndimage.gaussian_filter(deformation, 0.6)
         if self.train:
             # hh, ww = deformation.shape[:2]
             # x, y = np.meshgrid(np.arange(ww), np.arange(hh))
@@ -251,13 +223,9 @@ class Dataset(data.Dataset):
                 if self.use_masks:
                     moving_mask = fixed_mask.copy()
                 deformation = deformation * 0.
-        #max_dist = 40
         if self.smooth:
-            moving_image = cv2.medianBlur(np.uint8(255*normalize(moving_image)), 5)
-            fixed_image = cv2.medianBlur(np.uint8(255*normalize(fixed_image)), 5)
-#            moving_image = ndimage.gaussian_filter(moving_image, 1.2)
-#            fixed_image = ndimage.gaussian_filter(fixed_image, 1.2)
-        #cv2.imwrite('test.jpg', np.concatenate([moving_image, fixed_image], axis=1))
+            moving_image = cv2.medianBlur(np.uint8(255*normalize_min_max(moving_image)), 5)
+            fixed_image = cv2.medianBlur(np.uint8(255*normalize_min_max(fixed_image)), 5)
         if self.use_extra:
             extra_info = abs(fixed_image - moving_image)
             extra_info = to_tensor(extra_info)
@@ -268,13 +236,13 @@ class Dataset(data.Dataset):
             fixed_mask = torch.Tensor(fixed_mask > 0).float()[None]
             moving_mask = torch.Tensor(moving_mask > 0).float()[None]
             
-            # print(fixed_mask.max(), fixed_mask.min(), fixed_mask.shape)
             if self.use_mul:
                 fixed_image = fixed_image * fixed_mask
                 moving_image = moving_image * moving_mask
             else:
                 fixed_image = torch.cat([fixed_image, fixed_mask], dim=0)
                 moving_image = torch.cat([moving_image, moving_mask], dim=0)
+
         if self.use_extra:
             fixed_image = torch.cat([fixed_image, extra_info], dim=0)
 
@@ -283,14 +251,11 @@ class Dataset(data.Dataset):
 
 if __name__ == '__main__':
     path = '/data/sim/Notebooks/VM/dataset/train_set.pkl'
-    dataset = Dataset(path, (1, 256, 256), size_file='../src_old/sizes.txt',
+    dataset = Dataset(path, (1, 256, 256), size_file='sizes.txt',
                       smooth=True, train=True, shuffle=True, use_masks=True, use_mul=False)
     fixed, moving, deform = dataset[0]
-#    fixed = fixed[0][None]
-#    moving = moving[0][None]
-    # deform *= 10.
     print(deform.min(), deform.max())
-    from voxelmorph2d import SpatialTransformation
+    from basic_nets.spatial_transform import SpatialTransformation
 
     SP = SpatialTransformation()
     print(deform.shape, moving.shape)

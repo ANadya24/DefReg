@@ -1,13 +1,9 @@
 from skimage import io, filters
 import javabridge
 import bioformats
-import numpy as np
-import os
 from glob import glob
-from scipy.ndimage.interpolation import map_coordinates
-import imagesize
 import pickle
-from ffRemap import *
+from utils.ffRemap import *
 from matplotlib import pyplot as plt
 
 

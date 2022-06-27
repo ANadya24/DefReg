@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from DefReg.basic_nets.unet import UNet
+from basic_nets.unet import UNet
 
 
 class DenoiseRegNet(nn.Module):
@@ -11,17 +11,17 @@ class DenoiseRegNet(nn.Module):
     LIVE CELL MICROSCOPY IMAGES USING DEEP LEARNING
     """
 
-    def __init__(self, in_channels, image_size=128, device='cpu'):
+    def __init__(self, in_channels):
         super(DenoiseRegNet, self).__init__()
 
         ####Denoising part####
-        self.denoise_unet = UNet(1, 1, inter_channel=(16, 32, 64))
+        self.denoise_unet = UNet(in_channels, 1, inter_channel=(16, 32, 64))
         self.denoise_global = nn.AdaptiveAvgPool2d((1, 1))
 
         ####Registration part####
 
         self.reg_fc = nn.Sequential(
-            nn.Linear(64*2, 32),
+            nn.Linear(64 * 2, 32),
             nn.BatchNorm1d(32),
             nn.ReLU(True),
             nn.Linear(32, 3 * 2),
@@ -66,5 +66,10 @@ class DenoiseRegNet(nn.Module):
         theta_mf = self.reg_fc(pair_mf)
         grid = F.affine_grid(theta_mf, denoised_fixed.size())
         trf_fixed_image = F.grid_sample(denoised_fixed, grid)
-        return denoised_fixed, denoised_moving, \
-               trf_fixed_image, trf_moving_image
+
+        output = {'denoised_fixed': denoised_fixed,
+                  'denoised_moving': denoised_moving,
+                  'trf_fixed_image': trf_fixed_image,
+                  'trf_moving_image': trf_moving_image}
+        return output
+

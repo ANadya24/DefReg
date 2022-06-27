@@ -1,14 +1,11 @@
 import torch
 import torchvision
-import numpy as np
 from glob import glob
-import matplotlib.pyplot as plt
 import skimage.io as io
 from skimage import color
 import os
 from skimage.transform import resize
-from tqdm import tqdm
-from ffRemap import *
+from utils.ffRemap import *
 from src.voxelmorph2d import SpatialTransformation, DefNet
 
 use_gpu = torch.cuda.is_available()

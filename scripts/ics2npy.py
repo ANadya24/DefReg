@@ -1,11 +1,8 @@
 from skimage import io
 import javabridge
 import bioformats
-import numpy as np
-import os
 from glob import glob
-from ffRemap import *
-import imagesize
+from utils.ffRemap import *
 from tqdm import tqdm
 
 

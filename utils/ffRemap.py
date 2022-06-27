@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 from scipy import interpolate
-from scipy.ndimage import interpolation
+#TODO add description
 
 
 def ffremap(def_prev, def_cur):
@@ -18,21 +18,17 @@ def ffremap(def_prev, def_cur):
     return new_def
 
 
-def ffremap2(def_prev, def_cur, num=4):
+def ffremap2(def_prev, def_cur):
     h, w, _ = def_prev.shape
     x, y = np.meshgrid(np.arange(0, w), np.arange(0, h))
     x_grid = x + def_prev[:, :, 0]
     y_grid = y + def_prev[:, :, 1]
     x_grid = np.clip(x_grid, 0, w - 2)
     y_grid = np.clip(y_grid, 0, h - 2)
-    # y_grid = y_grid.reshape(-1, 1)
-    # def_cur = np.pad(def_cur, ((1, 1), (1, 1), (0, 0)))
-    # x_grid = x_grid + 1
-    # y_grid = y_grid + 1
     cy = y_grid - np.floor(y_grid)
     cx = x_grid - np.floor(x_grid)
-    ix = np.floor(x_grid).astype('int')
-    iy = np.floor(y_grid).astype('int')
+    ix = np.floor(x_grid).astype(np.int32)
+    iy = np.floor(y_grid).astype(np.int32)
 
     vy00 = def_cur[iy, ix, 1]
     vy01 = def_cur[iy, ix + 1, 1]
@@ -48,9 +44,6 @@ def ffremap2(def_prev, def_cur, num=4):
             1 - cy))
     xs = (vx11 * cx * cy + vx10 * cy * (1 - cx) + vx01 * cx * (1 - cy) + vx00 * (1 - cx) * (
             1 - cy))
-
-    # xs = xs.reshape((h, w))
-    # ys = ys.reshape((h, w))
 
     new_def = np.zeros(def_prev.shape)
 
@@ -79,18 +72,15 @@ def dots_remap_bcw(dots, deformation, num=4):
             indexes.append(id)
             k[id] = k.max()
         indexes = np.array(indexes)
-        indexesi = indexes[:,0]
-        indexesj = indexes[:,1]
-        # print(indexesi, indexesj)
-        # input()
+        indexesi = indexes[:, 0]
+        indexesj = indexes[:, 1]
 
-        dist_sum = sum([di for di in dist])
         for i, (idi, idj) in enumerate(zip(indexesi, indexesj)):
             fx += deformation[idi, idj, 0]
             fy += deformation[idi, idj, 1]
 
-        fx = fx/num
-        fy = fy/num
+        fx = fx / num
+        fy = fy / num
 
         dots[d, 0] += fx
         dots[d, 1] += fy
@@ -101,7 +91,6 @@ def dots_remap_bcw(dots, deformation, num=4):
 
 
 def ff_1_to_k(ff_1_to_k_minus_1, ff_k_minus_1_to_k):
-    # new_def = ffremap2(ff_1_to_k_minus_1, ff_k_minus_1_to_k)
     new_def = ff_1_to_k_minus_1 + ffremap2(ff_1_to_k_minus_1, ff_k_minus_1_to_k)
     return new_def
 
@@ -114,7 +103,7 @@ def forward_warp(image, deformation):
     indices = np.column_stack([np.reshape(x, (-1, 1)), np.reshape(y, (-1, 1))])
     im_new = sp.interpolate.griddata(indices, image.reshape(-1, 1), (x_grid, y_grid),
                                      method='linear', fill_value=0)
-    return np.clip(im_new.squeeze(), 0, 255).astype('uint8')
+    return np.clip(im_new.squeeze(), 0, 255).astype(np.uint8)
 
 
 def backward_warp(image, deformation):
@@ -124,4 +113,4 @@ def backward_warp(image, deformation):
     y_grid = y + deformation[:, :, 1]
     indices = np.column_stack([np.reshape(x_grid, (-1, 1)), np.reshape(y_grid, (-1, 1))])
     im_new = sp.interpolate.griddata(indices, image.reshape(-1, 1), (x, y), method='linear', fill_value=0)
-    return np.clip(im_new.squeeze(), 0, 255).astype('uint8')
+    return np.clip(im_new.squeeze(), 0, 255).astype(np.uint8)

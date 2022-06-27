@@ -28,13 +28,13 @@ def validate_images(images1, images2, images3, val_dir='val_images/', epoch=0, t
 
         i += 1
 
+
 def validate_deformations(def1, def2, val_dir='val_images/', epoch=0, train=False):
     if not os.path.exists(val_dir):
         os.mkdir(val_dir)
     def1 = def1.cpu().detach().numpy()
     def2 = def2.cpu().detach().numpy()
-#    print(def1.shape, def2.shape)
-#    input()
+
     for i, (d1, d2) in enumerate(zip(def1, def2)):
         minim = min(np.min(d1), np.min(d2))
         maxim = max(np.max(d1), np.max(d2))
@@ -42,7 +42,6 @@ def validate_deformations(def1, def2, val_dir='val_images/', epoch=0, train=Fals
         d2 = (d2 - minim) / (maxim - minim)
         d1 *= 255.
         d2 *= 255.
-#        im3 *= 255.
         d1 = d1.astype('uint8')
         d2 = d2.astype('uint8')
         im1 = np.concatenate([d1[0], d2[0]], axis=1)

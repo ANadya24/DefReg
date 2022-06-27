@@ -2,15 +2,13 @@ import src.voxelmorph2d as vm2d
 import src.voxelmorph3d as vm3d
 import torch
 import torchvision
-import numpy as np
 from glob import glob
-import matplotlib.pyplot as plt
 import skimage.io as io
 from skimage import color
 import os
 from skimage.transform import resize
 from tqdm import tqdm
-from ffRemap import *
+from utils.ffRemap import *
 
 use_gpu = True#torch.cuda.is_available()
 devices = ['cpu', 'cuda']
