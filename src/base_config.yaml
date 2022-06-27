@@ -1,0 +1,68 @@
+batch_size: 4
+criterion:
+  losses:
+  - input_keys:
+      pred: predicted_image
+      target: fixed_image
+    loss_name: MSELoss
+    loss_parameters:
+      reduction: mean
+    return_loss: false
+    weight: 1.0
+dataset:
+  im_size: !!python/tuple
+  - 1
+  - 256
+  - 256
+  image_keypoints: []
+  image_sequences: []
+  register_limit: 5
+  shuffle: false
+  train: true
+  use_crop: false
+  use_masks: true
+device: cuda:0
+expdir: /Users/anshinan/asp_projects/DefReg/src
+load_epoch: 0
+logdir: /Users/anshinan/asp_projects/DefReg/logs/test_exp
+model:
+  device: cpu
+  image_size: 128
+  in_channels: 1
+  model_name: DefRegNet
+model_name: model
+model_path: ''
+num_epochs: 100
+num_workers: 4
+optimizer:
+  lr: 0.0001
+  name: Adam
+  parameters:
+    betas: !!python/tuple
+    - 0.9
+    - 0.999
+    eps: 1.0e-08
+    weight_decay: 0
+save_step: 20
+savedir: /Users/anshinan/asp_projects/DefReg/logs/test_exp
+scheduler:
+  name: ReduceLROnPlateau
+  parameters:
+    factor: 0.1
+    mode: min
+    patience: 10
+    threshold: 0.0001
+    threshold_mode: rel
+tensorboard: true
+val_dataset:
+  im_size: !!python/tuple
+  - 1
+  - 256
+  - 256
+  image_keypoints: []
+  image_sequences: []
+  register_limit: 5
+  shuffle: false
+  train: false
+  use_crop: false
+  use_masks: true
