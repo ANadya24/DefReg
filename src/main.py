@@ -88,12 +88,20 @@ if __name__ == "__main__":
     if config.scheduler is not None:
         scheduler = getattr(torch.optim.lr_scheduler,
                             config.scheduler.name)(**config.scheduler.parameters)
+    else:
+        scheduler = None
 
     loss = CustomCriterion(config.criterion)
 
-    train
-
-    # train(load_epoch, max_epochs, training_generator, validation_generator, vm, optimizer,
-    #       device, total_loss, save_dir, model_name, image_dir, save_step, use_gpu,
-    #       use_tensorboard=use_tensorboard,
-    #       logdir=config.logdir)
+    train(model=model, train_loader=training_generator,
+          val_loader=validation_generator,
+          optimizer=optimizer,
+          scheduler=scheduler,
+          loss=loss,
+          device=config.device,
+          model_name=config.model_name, save_step=config.save_step,
+          save_dir=config.savedir, image_dir=config.logdir,
+          log_dir=config.logdir,
+          load_epoch=config.load_epoch,
+          max_epochs=config.num_epochs,
+          use_tensorboard=config.tensorboard)
