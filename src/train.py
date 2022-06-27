@@ -48,6 +48,7 @@ def train_model(input_batch: torch.Tensor,
         device), batch_moving.to(device)
 
     output_dict = model(batch_moving, batch_fixed)
+    output_dict.update({'batch_fixed': batch_fixed, 'batch_moving': batch_moving})
 
     losses = loss(output_dict)
     train_loss = losses['total_loss']
@@ -139,6 +140,7 @@ def validate_model(input_batch: torch.Tensor,
             device), batch_moving.to(device)
 
         output_dict = model(batch_moving, batch_fixed)
+        output_dict.update({'batch_fixed': batch_fixed, 'batch_moving': batch_moving})
 
         losses = loss(output_dict)
 
