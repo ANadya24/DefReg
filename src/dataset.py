@@ -27,13 +27,19 @@ class Dataset(data.Dataset):
         self.image_keypoints = []
         self.image_masks = []
         self.use_masks = use_masks
+        self.use_crop = use_crop
+        self.train = train
+        self.im_size = im_size[1:]
 
         for sequence_path, keypoint_path in zip(image_sequences, image_keypoints):
-            assert sequence_path.split('/')[-1].split('.')[0] == \
-                   keypoint_path.split('/')[-1].split('.')[0], 'Keypoint and sequence files must be ordered!'
+            if keypoint_path == '':
+                assert self.train is True
+            else:
+                assert sequence_path.split('/')[-1].split('.')[0] == \
+                       keypoint_path.split('/')[-1].split('.')[0], 'Keypoint and sequence files must be ordered!'
 
             seq = io.imread(sequence_path)
-            if seq.shape[-1] == 3:
+            if seq.shape[-1] == 3 and im_size[0] == 1:
                 seq = color.rgb2gray(seq)
             self.image_sequences.append(seq)
 
@@ -44,26 +50,31 @@ class Dataset(data.Dataset):
                 mask_seq = 1. - np.clip(np.array(mask_seq, dtype=np.float32), 0., 1.)
                 self.image_masks.append(mask_seq)
 
-            poi = spio.loadmat(keypoint_path)
-            bound = np.stack(poi['spotsB'][0].squeeze())
-            inner = np.stack(poi['spotsI'][0].squeeze())
+            if keypoint_path == '':
+                self.image_keypoints.append({'inner': np.zeros((1, 2)),
+                                             'bound': np.zeros((1, 2)),
+                                             'lines': (np.zeros((4, 2)), np.ones(4))})
+            else:
+                poi = spio.loadmat(keypoint_path)
+                bound = np.stack(poi['spotsB'][0].squeeze())
+                inner = np.stack(poi['spotsI'][0].squeeze())
 
-            bound = bound[:, :, :2]
-            inner = inner[:, :, :2]
+                bound = bound[:, :, :2]
+                inner = inner[:, :, :2]
 
-            line1 = np.stack(poi['lines'][:, 0])
-            line2 = np.stack(poi['lines'][:, 1])
-            line3 = np.stack(poi['lines'][:, 2])
-            line4 = np.stack(poi['lines'][:, 3])
+                line1 = np.stack(poi['lines'][:, 0])
+                line2 = np.stack(poi['lines'][:, 1])
+                line3 = np.stack(poi['lines'][:, 2])
+                line4 = np.stack(poi['lines'][:, 3])
 
-            len1 = len(line1[0])
-            len2 = len(line2[0])
-            len3 = len(line3[0])
-            len4 = len(line4[0])
+                len1 = len(line1[0])
+                len2 = len(line2[0])
+                len3 = len(line3[0])
+                len4 = len(line4[0])
 
-            lines = np.concatenate((line1, line2, line3, line4), axis=1)
-            lines_lengths = np.array([len1, len2, len3, len4])
-            self.image_keypoints.append({'inner': inner, 'bound': bound, 'lines': (lines, lines_lengths)})
+                lines = np.concatenate((line1, line2, line3, line4), axis=1)
+                lines_lengths = np.array([len1, len2, len3, len4])
+                self.image_keypoints.append({'inner': inner, 'bound': bound, 'lines': (lines, lines_lengths)})
 
         self.seq_numeration = []
         for seq_idx, _ in enumerate(self.image_sequences):
@@ -72,11 +83,6 @@ class Dataset(data.Dataset):
 
         self.length = len(self.seq_numeration)
         print('Dataset length is ', self.length)
-
-        self.use_crop = use_crop
-
-        self.im_size = im_size[1:]
-        self.train = train
 
         if isinstance(register_limit, int):
             self.register_limit = [register_limit] * len(self.image_sequences)
@@ -200,7 +206,7 @@ class Dataset(data.Dataset):
         points2 = np.clip(points2, 0., self.im_size[1] - 1)
 
         if self.train:
-            h, w = self.im_size[-2:]
+            h, w = self.im_size
             if np.random.rand() < 0.5:
                 image1 = image1[:, ::-1].copy()
                 image2 = image2[:, ::-1].copy()
