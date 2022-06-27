@@ -51,9 +51,9 @@ class Dataset(data.Dataset):
                 self.image_masks.append(mask_seq)
 
             if keypoint_path == '':
-                self.image_keypoints.append({'inner': np.zeros((1, 2)),
-                                             'bound': np.zeros((1, 2)),
-                                             'lines': (np.zeros((4, 2)), np.ones(4))})
+                self.image_keypoints.append({'inner': np.zeros((len(seq), 4, 2)),
+                                             'bound': np.zeros((len(seq), 4, 2)),
+                                             'lines': (np.zeros((len(seq), 4, 2)), np.ones((len(seq), 4)))})
             else:
                 poi = spio.loadmat(keypoint_path)
                 bound = np.stack(poi['spotsB'][0].squeeze())
@@ -82,7 +82,6 @@ class Dataset(data.Dataset):
                 self.seq_numeration.append((seq_idx, i))
 
         self.length = len(self.seq_numeration)
-        print('Dataset length is ', self.length)
 
         if isinstance(register_limit, int):
             self.register_limit = [register_limit] * len(self.image_sequences)
@@ -242,9 +241,9 @@ class Dataset(data.Dataset):
             image1 = torch.cat([image1, torch.Tensor(mask1).float()[None]], 0)
             image2 = torch.cat([image2, torch.Tensor(mask2).float()[None]], 0)
 
-        points1[:, 0] /= self.im_size[1]
-        points1[:, 1] /= self.im_size[0]
-        points2[:, 0] /= self.im_size[1]
-        points2[:, 1] /= self.im_size[0]
+        # points1[:, 0] /= self.im_size[1]
+        # points1[:, 1] /= self.im_size[0]
+        # points2[:, 0] /= self.im_size[1]
+        # points2[:, 1] /= self.im_size[0]
 
         return image1, image2, points1, points2, points_len
