@@ -7,8 +7,8 @@ from scipy import io as spio
 import albumentations as A
 from utils.data_process import pad_image, match_histograms, normalize_mean_std
 
-
 MAX_LINE_LEN = 1300
+
 
 class Dataset(data.Dataset):
     def __init__(self, image_sequences, image_keypoints,
@@ -52,10 +52,11 @@ class Dataset(data.Dataset):
                 mask_seq = 1. - np.clip(np.array(mask_seq, dtype=np.float32), 0., 1.)
                 self.image_masks.append(mask_seq)
 
-            if keypoint_path == '':
-                self.image_keypoints.append({'inner': np.zeros((len(seq), 4, 2)),
-                                             'bound': np.zeros((len(seq), 8, 2)),
-                                             'lines': (np.zeros((len(seq), MAX_LINE_LEN, 2)), [1, 1, 1, 1])})
+            if keypoint_path == '' or self.train:
+                continue
+                # self.image_keypoints.append({'inner': np.zeros((len(seq), 4, 2)),
+                #                              'bound': np.zeros((len(seq), 8, 2)),
+                #                              'lines': (np.zeros((len(seq), MAX_LINE_LEN, 2)), [1, 1, 1, 1])})
             else:
                 poi = spio.loadmat(keypoint_path)
                 bound = np.stack(poi['spotsB'][0].squeeze())
@@ -138,14 +139,14 @@ class Dataset(data.Dataset):
         if self.use_masks:
             mask1 = self.image_masks[seq_idx][it].squeeze()
             mask2 = self.image_masks[seq_idx][it2].squeeze()
-        
-        inner1 = np.array(self.image_keypoints[seq_idx]['inner'][it]).reshape(-1, 2)
-        inner2 = np.array(self.image_keypoints[seq_idx]['inner'][it2]).reshape(-1, 2)
-        bound1 = np.array(self.image_keypoints[seq_idx]['bound'][it]).reshape(-1, 2)
-        bound2 = np.array(self.image_keypoints[seq_idx]['bound'][it2]).reshape(-1, 2)
-        lines1 = np.array(self.image_keypoints[seq_idx]['lines'][0][it]).reshape(-1, 2)
-        lines_len = self.image_keypoints[seq_idx]['lines'][1]
-        lines2 = np.array(self.image_keypoints[seq_idx]['lines'][0][it2]).reshape(-1, 2)
+        if not self.train:
+            inner1 = np.array(self.image_keypoints[seq_idx]['inner'][it]).reshape(-1, 2)
+            inner2 = np.array(self.image_keypoints[seq_idx]['inner'][it2]).reshape(-1, 2)
+            bound1 = np.array(self.image_keypoints[seq_idx]['bound'][it]).reshape(-1, 2)
+            bound2 = np.array(self.image_keypoints[seq_idx]['bound'][it2]).reshape(-1, 2)
+            lines1 = np.array(self.image_keypoints[seq_idx]['lines'][0][it]).reshape(-1, 2)
+            lines_len = self.image_keypoints[seq_idx]['lines'][1]
+            lines2 = np.array(self.image_keypoints[seq_idx]['lines'][0][it2]).reshape(-1, 2)
         h, w = image1.shape
 
         if self.use_crop:
@@ -156,12 +157,13 @@ class Dataset(data.Dataset):
             if self.use_masks:
                 mask1 = mask1[y0: y0 + self.im_size[0], x0:x0 + self.im_size[1]]
                 mask2 = mask2[y0: y0 + self.im_size[0], x0:x0 + self.im_size[1]]
-            inner1 -= np.array([x0, y0]).reshape(1, 2)
-            inner2 -= np.array([x0, y0]).reshape(1, 2)
-            bound1 -= np.array([x0, y0]).reshape(1, 2)
-            bound2 -= np.array([x0, y0]).reshape(1, 2)
-            lines1 -= np.array([x0, y0]).reshape(1, 2)
-            lines2 -= np.array([x0, y0]).reshape(1, 2)
+            if not self.train:
+                inner1 -= np.array([x0, y0]).reshape(1, 2)
+                inner2 -= np.array([x0, y0]).reshape(1, 2)
+                bound1 -= np.array([x0, y0]).reshape(1, 2)
+                bound2 -= np.array([x0, y0]).reshape(1, 2)
+                lines1 -= np.array([x0, y0]).reshape(1, 2)
+                lines2 -= np.array([x0, y0]).reshape(1, 2)
         else:
             h, w = image1.shape
 
@@ -179,33 +181,46 @@ class Dataset(data.Dataset):
                         mask1 = pad_image(mask1, (0, 0, 0, h - w))
                         mask2 = pad_image(mask2, (0, 0, 0, h - w))
 
-        inner_len1 = len(inner1)
-        bound_len1 = len(bound1)
-        points_len = np.array([inner_len1, bound_len1, *lines_len])
-        points1 = np.concatenate([inner1, bound1, lines1], axis=0).astype(np.float32)
-        if self.use_masks:
-            data1 = self.resize(image=image1, mask=mask1, keypoints=points1)
-            image1, points1, mask1 = data1['image'], np.array(data1['keypoints'],
-                                                              dtype=np.float32), data1['mask']
-        else:
-            data1 = self.resize(image=image1, keypoints=points1)
-            image1, points1 = data1['image'], np.array(data1['keypoints'], dtype=np.float32)
+        if not self.train:
+            inner_len1 = len(inner1)
+            bound_len1 = len(bound1)
+            points_len = np.array([inner_len1, bound_len1, *lines_len])
+            points1 = np.concatenate([inner1, bound1, lines1], axis=0).astype(np.float32)
 
-        inner_len2 = len(inner2)
-        bound_len2 = len(bound2)
-        assert inner_len2 == inner_len1
-        assert bound_len2 == bound_len1
-
-        points2 = np.concatenate([inner2, bound2, lines2], axis=0).astype(np.float32)
+        resize_dict = {'image': image1}
+        if not self.train:
+            resize_dict['keypoints'] = points1
         if self.use_masks:
-            data2 = self.resize(image=image2, mask=mask2, keypoints=points2)
-            image2, points2, mask2 = data2['image'], np.array(data2['keypoints'],
-                                                              dtype=np.float32), data2['mask']
-        else:
-            data2 = self.resize(image=image2, keypoints=points2)
-            image2, points2 = data2['image'], np.array(data2['keypoints'], dtype=np.float32)
-        points1 = np.clip(points1, 0., self.im_size[1] - 1)
-        points2 = np.clip(points2, 0., self.im_size[1] - 1)
+            resize_dict['mask'] = mask1
+        data1 = self.resize(**resize_dict)
+
+        image1 = data1['image']
+        if not self.train:
+            points1 = np.array(data1['keypoints'], dtype=np.float32)
+            points1 = np.clip(points1, 0., self.im_size[1] - 1)
+        if self.use_masks:
+            mask1 = data1['mask']
+
+        if not self.train:
+            inner_len2 = len(inner2)
+            bound_len2 = len(bound2)
+            assert inner_len2 == inner_len1
+            assert bound_len2 == bound_len1
+            points2 = np.concatenate([inner2, bound2, lines2], axis=0).astype(np.float32)
+
+        resize_dict = {'image': image2}
+        if not self.train:
+            resize_dict['keypoints'] = points2
+        if self.use_masks:
+            resize_dict['mask'] = mask2
+        data2 = self.resize(**resize_dict)
+
+        image2 = data2['image']
+        if not self.train:
+            points2 = np.array(data2['keypoints'], dtype=np.float32)
+            points2 = np.clip(points2, 0., self.im_size[1] - 1)
+        if self.use_masks:
+            mask2 = data2['mask']
 
         if self.train:
             h, w = self.im_size
@@ -215,8 +230,8 @@ class Dataset(data.Dataset):
                 if self.use_masks:
                     mask1 = mask1[:, ::-1].copy()
                     mask2 = mask2[:, ::-1].copy()
-                points1[:, 0] = w - 1 - points1[:, 0]
-                points2[:, 0] = w - 1 - points2[:, 0]
+                # points1[:, 0] = w - 1 - points1[:, 0]
+                # points2[:, 0] = w - 1 - points2[:, 0]
 
             if np.random.rand() < 0.5:
                 image1 = image1[::-1].copy()
@@ -224,20 +239,20 @@ class Dataset(data.Dataset):
                 if self.use_masks:
                     mask1 = mask1[::-1].copy()
                     mask2 = mask2[::-1].copy()
-                points1[:, 1] = h - 1 - points1[:, 1]
-                points2[:, 1] = h - 1 - points2[:, 1]
+                # points1[:, 1] = h - 1 - points1[:, 1]
+                # points2[:, 1] = h - 1 - points2[:, 1]
             if self.use_masks:
-                data = self.aug_pipe(image=image1.astype(np.float32), 
-                                     mask=mask1.astype(np.float32), keypoints=points1,
-                                     image2=image2.astype(np.float32), 
-                                     mask2=mask2.astype(np.float32), keypoints2=points2)
-                image1, points1, mask1 = data['image'], np.array(data['keypoints'], dtype=np.float32), data['mask']
-                image2, points2, mask2 = data['image2'], np.array(data['keypoints2'], dtype=np.float32), data['mask2']
+                data = self.aug_pipe(image=image1.astype(np.float32),
+                                     mask=mask1.astype(np.float32),  # keypoints=points1,
+                                     image2=image2.astype(np.float32),
+                                     mask2=mask2.astype(np.float32), )  # keypoints2=points2)
+                image1, mask1 = data['image'], data['mask']
+                image2, mask2 = data['image2'], data['mask2']
             else:
-                data = self.aug_pipe(image=image1.astype(np.float32), keypoints=points1,
-                                     image2=image2.astype(np.float32), keypoints2=points2)
-                image1, points1 = data['image'], np.array(data['keypoints'], dtype=np.float32)
-                image2, points2 = data['image2'], np.array(data['keypoints2'], dtype=np.float32)
+                data = self.aug_pipe(image=image1.astype(np.float32),  # keypoints=points1,
+                                     image2=image2.astype(np.float32), )  # keypoints2=points2)
+                image1 = data['image']
+                image2 = data['image2']
 
         image1 = self.to_tensor(image1).float()
         image2 = self.to_tensor(image2).float()
@@ -246,9 +261,7 @@ class Dataset(data.Dataset):
             image1 = torch.cat([image1, torch.Tensor(mask1).float()[None]], 0)
             image2 = torch.cat([image2, torch.Tensor(mask2).float()[None]], 0)
 
-        # points1[:, 0] /= self.im_size[1]
-        # points1[:, 1] /= self.im_size[0]
-        # points2[:, 0] /= self.im_size[1]
-        # points2[:, 1] /= self.im_size[0]
+        if self.train:
+            return image1, image2
 
         return image1, image2, points1, points2, points_len.astype(np.int32)
