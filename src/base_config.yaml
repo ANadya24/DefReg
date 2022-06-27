@@ -17,7 +17,6 @@ dataset:
   image_keypoints: []
   image_sequences: []
   register_limit: 5
-  shuffle: false
   train: true
   use_crop: false
   use_masks: true
@@ -62,7 +61,6 @@ val_dataset:
   image_keypoints: []
   image_sequences: []
   register_limit: 5
-  shuffle: false
   train: false
   use_crop: false
   use_masks: true
