@@ -268,14 +268,14 @@ def train(model: torch.nn.Module,
             scheduler.step(val_losses['total_loss'])
 
         print('Epoch', epoch + 1, 'train_loss/test_loss: ',
-              train_losses['total_loss'], '/', val_losses['total_loss'])
+              train_losses['total_loss'].item(), '/', val_losses['total_loss'].item())
         for key in val_losses:
             if key == 'total_loss':
                 continue
-            print('Epoch', epoch + 1, f'{key} train/test: ', train_losses[key], '/', val_losses[key])
+            print('Epoch', epoch + 1, f'{key} train/test: ', train_losses[key].item(), '/', val_losses[key].item())
 
         for key in val_metrics:
-            print('Epoch', epoch + 1, f'Error: ', val_metrics[key])
+            print('Epoch', epoch + 1, f'{key} error: ', val_metrics[key].item())
 
         for key in best_metric_values:
             if key not in best_metric_values or val_metrics[key] < best_metric_values[key]:
