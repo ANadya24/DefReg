@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from basic_nets.unet import UNet
+from models.defregnet_model import DefRegNet
 
 
 class DenoiseRegNet(nn.Module):
@@ -69,7 +70,30 @@ class DenoiseRegNet(nn.Module):
 
         output = {'denoised_fixed': denoised_fixed,
                   'denoised_moving': denoised_moving,
-                  'trf_fixed_image': trf_fixed_image,
-                  'trf_moving_image': trf_moving_image}
+                  'theta_moving2fixed': theta_fm,
+                  'theta_fixed2moving': theta_mf,
+                  'affine_fixed_image': trf_fixed_image,
+                  'affine_moving_image': trf_moving_image}
         return output
 
+    
+
+class DenoiseDefRegNet(nn.Module):
+    """
+    DenoiseReg + DefRegNet
+    """
+
+    def __init__(self, in_channels, image_size=128, device='cpu'):
+        super(DenoiseDefRegNet, self).__init__()
+
+        self.denoise_reg_net = DenoiseRegNet(in_channels=in_channels)
+        self.def_reg_net = DefRegNet(in_channels=in_channels, 
+                                     image_size=image_size,
+                                     device=device)
+
+    def forward(self, fixed_image, moving_image):
+        output = self.denoise_reg_net(fixed_image, moving_image)
+        output.update(self.def_reg_net(output['denoised_fixed'],
+                                       output['trf_moving_image']))
+
+        return output

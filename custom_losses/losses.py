@@ -31,7 +31,7 @@ def cross_correlation(I, J, n, use_gpu=False):
 
 
 def cross_correlation_loss(I, J, n, use_gpu=False):
-    return 1. - cross_correlation(I, J, n, use_gpu)
+    return -1. * cross_correlation(I, J, n, use_gpu)
 
 
 def ncc(x, y):
@@ -49,7 +49,7 @@ def ncc(x, y):
 
 
 def ncc_loss(x, y):
-    return 1. - ncc(x, y)
+    return -1. * ncc(x, y)
 
 
 def smooothing_loss(y_pred):
@@ -150,12 +150,23 @@ def ssim_loss(pred, target):
 
 
 def deformation_l2(pred_def, target_def):
-    loss = ((pred_def - target_def) ** 2).sum(dim=3) ** 0.5
+    channel_axis = np.argmin(pred_def.shape[1:]) + 1
+    loss = ((pred_def - target_def) ** 2).sum(dim=channel_axis) ** 0.5
     return loss.mean()
 
 
 def mse(x, y):
     return torch.mean((x - y) ** 2)
+
+
+# def deformation_incompressibility(deformation):
+#     # TODO
+    
+# def elasticity_loss():
+#     # TODO
+
+# def TPS_loss():
+#     # TODO
 
 
 def construct_loss(loss_names, weights=None, n=9, sm_lambda=0.01, use_gpu=False, def_lambda=10, use_masks=True):

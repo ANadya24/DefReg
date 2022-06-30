@@ -12,6 +12,8 @@ from utils.val_images import validate_images, validate_deformations
 from utils.points_error_calculation import frechetDist
 from utils.ffRemap import dots_remap_bcw
 
+from time import time
+
 
 def save_validation_images(batch_fixed: torch.Tensor,
                            batch_moving: torch.Tensor,
@@ -70,7 +72,7 @@ def apply_deformation_2points(batch_points, batch_deformation):
         batch_deformation = batch_deformation.detach().cpu().numpy()
 
     deformed_points = np.zeros_like(batch_points)
-    for i in range(1, len(batch_points)):
+    for i in range(len(batch_points)):
         deformation = batch_deformation[i]
         deformed_points[i] = dots_remap_bcw(batch_points[i].copy(), deformation.copy())
 
@@ -87,38 +89,38 @@ def calculate_point_metrics(batch_points1: Union[torch.Tensor, np.ndarray],
     if isinstance(batch_points_len, torch.Tensor):
         batch_points_len = batch_points_len.detach().cpu().numpy()
 
-    err = defaultdict(list)
+    error = ((((batch_points1 - batch_points2) ** 2).sum(axis=2)) ** 0.5).sum(axis=1) / batch_points_len.sum(axis=1)
+    
+    output = {'points_error_l2': np.mean(error)}
 
-    for (points1, points2, points_len) in zip(batch_points1, batch_points2, batch_points_len):
+#         inner1 = points1[:points_len[0]]
+#         inner2 = points2[:points_len[0]]
 
-        inner1 = points1[:points_len[0]]
-        inner2 = points2[:points_len[0]]
+#         bound1 = points1[points_len[0]: points_len[1]]
+#         bound2 = points2[points_len[0]: points_len[1]]
 
-        bound1 = points1[points_len[0]: points_len[1]]
-        bound2 = points2[points_len[0]: points_len[1]]
+#         lines1 = points1[points_len[1]:]
+#         lines2 = points2[points_len[1]:]
+#         len1, len2, len3, len4 = points_len[2:]
 
-        lines1 = points1[points_len[1]:]
-        lines2 = points2[points_len[1]:]
-        len1, len2, len3, len4 = points_len[2:]
+#         inner_err = ((((inner1 - inner2) ** 2).sum(axis=1)) ** 0.5).sum(axis=0) / float(inner1.shape[1])
 
-        inner_err = ((((inner1 - inner2) ** 2).sum(axis=1)) ** 0.5).sum(axis=0) / float(inner1.shape[1])
+#         bound_err = ((((bound1 - bound2) ** 2).sum(axis=1)) ** 0.5).sum(axis=0) / float(bound1.shape[1])
 
-        bound_err = ((((bound1 - bound2) ** 2).sum(axis=1)) ** 0.5).sum(axis=0) / float(bound1.shape[1])
+#         b1 = frechetDist(lines1[:len1], lines2[:len1])
+#         b2 = frechetDist(lines1[len1:len1 + len2], lines2[len1:len1 + len2])
+#         b3 = frechetDist(lines1[len1 + len2:len1 + len2 + len3],
+#                          lines2[len1 + len2:len1 + len2 + len3])
+#         b4 = frechetDist(lines1[len1 + len2 + len3:len1 + len2 + len3 + len4],
+#                          lines2[len1 + len2 + len3:len1 + len2 + len3 + len4])
+#         line_err = (b1 + b2 + b3 + b4) / 4.
+        # err['inner'].append(inner_err)
+        # err['bound'].append(bound_err)
+        # err['lines'].append(line_err)
 
-        b1 = frechetDist(lines1[:len1], lines2[:len1])
-        b2 = frechetDist(lines1[len1:len1 + len2], lines2[len1:len1 + len2])
-        b3 = frechetDist(lines1[len1 + len2:len1 + len2 + len3],
-                         lines2[len1 + len2:len1 + len2 + len3])
-        b4 = frechetDist(lines1[len1 + len2 + len3:len1 + len2 + len3 + len4],
-                         lines2[len1 + len2 + len3:len1 + len2 + len3 + len4])
-        line_err = (b1 + b2 + b3 + b4) / 4.
-        err['inner'].append(inner_err)
-        err['bound'].append(bound_err)
-        err['lines'].append(line_err)
-
-    output = {'inner': np.mean(err['inner']),
-              'bound': np.mean(err['bound']),
-              'lines': np.mean(err['lines'])}
+    # output = {'inner': np.mean(err['inner']),
+    #           'bound': np.mean(err['bound']),}
+              # 'lines': np.mean(err['lines'])}
 
     return output
 
@@ -134,27 +136,29 @@ def validate_model(input_batch: torch.Tensor,
     model.eval()
 
     with torch.no_grad():
-        batch_fixed, batch_moving, points_fixed, points_moving, points_len = input_batch
+        batch_fixed, batch_moving = input_batch[:2]
         batch_fixed, batch_moving = batch_fixed.to(
             device), batch_moving.to(device)
 
         output_dict = model(batch_moving, batch_fixed)
+        
         output_dict.update({'batch_fixed': batch_fixed, 'batch_moving': batch_moving})
 
         losses = loss(output_dict)
 
-        if (epoch + 1) % save_step == 0:
-            save_validation_images(batch_fixed, batch_moving, output_dict['batch_registered'],
-                                   output_dict['batch_deformation'], None,
-                                   image_dir=image_dir, epoch=epoch + 1, train=False)
+    if (epoch + 1) % save_step == 0:
+        save_validation_images(batch_fixed, batch_moving, output_dict['batch_registered'],
+                               output_dict['batch_deformation'], None,
+                               image_dir=image_dir, epoch=epoch + 1, train=False)
 
-        if return_point_metrics:
-            registered_points = apply_deformation_2points(
-                points_moving,
-                output_dict['batch_deformation'])
-            metrics = calculate_point_metrics(points_fixed, registered_points, points_len)
-            return losses, metrics
-        return losses
+    if return_point_metrics:
+        points_fixed, points_moving, points_len = input_batch[2:]
+        registered_points = apply_deformation_2points(
+            points_moving,
+            output_dict['batch_deformation'])
+        metrics = calculate_point_metrics(points_fixed, registered_points, points_len)
+        return losses, metrics
+    return losses
 
 
 def train(model: torch.nn.Module,
@@ -193,6 +197,7 @@ def train(model: torch.nn.Module,
         save_model(model)
 
     signal.signal(signal.SIGINT, sig_handler)
+    
     # Loop over epochs
     global_i = 0
     global_j = 0
@@ -201,62 +206,81 @@ def train(model: torch.nn.Module,
         os.makedirs(log_dir, exist_ok=True)
         summary_writer = SummaryWriter(log_dir=log_dir)
 
-    best_metric_values = defaultdict(int)
+    best_metric_values = defaultdict(float)
 
     for epoch in range(load_epoch, max_epochs):
-        train_losses = defaultdict(lambda: 0)
-        val_losses = defaultdict(lambda: 0)
-        val_metrics = defaultdict(lambda: 0)
+        # time_epoch_start = time()
+        train_losses = defaultdict(lambda: 0.)
+        val_losses = defaultdict(lambda: 0.)
+        val_metrics = defaultdict(lambda: 0.)
         total = 0
-
+        
+        # total_batches = 0
+        # time_batches = 0
+        
         # Training
         for batch in train_loader:
+            time_batch_start = time()
             batch_losses = train_model(input_batch=batch,
                                        model=model,
                                        optimizer=optimizer,
                                        device=device,
                                        loss=loss,
                                        save_step=save_step,
-                                       image_dir=image_dir,
+                                       image_dir=image_dir + '/images/',
                                        epoch=epoch)
 
             for key in batch_losses:
-                train_losses[key] += batch_losses[key]
+                train_losses[key] += batch_losses[key].item()
             total += 1
 
             if use_tensorboard:
                 for key in batch_losses:
                     summary_writer.add_scalar(key, batch_losses[key].item(), global_i)
                 global_i += 1
-
+#             time_batch_end = time()
+#             time_batches += time_batch_end - time_batch_start
+#             total_batches +=1
+            
+#         print('time for batch =', time_batches / total_batches)
+        # total_batches = 0
         for key in train_losses:
             train_losses[key] /= total
 
         # Testing
         total = 0
+        # time_batches = 0
         for batch in val_loader:
-
+            time_batch_start = time()
             batch_losses, batch_metrics = validate_model(input_batch=batch,
                                                          model=model,
                                                          device=device,
                                                          loss=loss,
                                                          save_step=save_step,
-                                                         image_dir=image_dir,
+                                                         image_dir=image_dir + '/images/',
                                                          epoch=epoch,
                                                          return_point_metrics=True)
 
             for key in batch_losses:
-                val_losses[key] += batch_losses[key]
+                val_losses[key] += batch_losses[key].item()
 
             for key in batch_metrics:
-                val_metrics[key] += batch_metrics[key]
+                val_metrics[key] += batch_metrics[key].item()
 
             total += 1
 
             if use_tensorboard:
                 for key in batch_losses:
                     summary_writer.add_scalar('val_' + key, batch_losses[key].item(), global_j)
+                for key in batch_metrics:
+                    summary_writer.add_scalar(key, batch_metrics[key].item(), global_j)
                 global_j += 1
+                
+#             time_batch_end = time()
+#             time_batches += time_batch_end - time_batch_start
+#             total_batches +=1
+            
+#         print('time for val batch =', time_batches / total_batches)
 
         for key in val_losses:
             val_losses[key] /= total
@@ -268,21 +292,32 @@ def train(model: torch.nn.Module,
             scheduler.step(val_losses['total_loss'])
 
         print('Epoch', epoch + 1, 'train_loss/test_loss: ',
-              train_losses['total_loss'].item(), '/', val_losses['total_loss'].item())
+              train_losses['total_loss'], '/', val_losses['total_loss'])
         for key in val_losses:
             if key == 'total_loss':
                 continue
-            print('Epoch', epoch + 1, f'{key} train/test: ', train_losses[key].item(), '/', val_losses[key].item())
+            print('Epoch', epoch + 1, f'{key} train/test: ', train_losses[key], '/', val_losses[key])
         
         print()
         for key in val_metrics:
-            print('Epoch', epoch + 1, f'{key} error: ', val_metrics[key].item())
+            print('Epoch', epoch + 1, f'{key} error: ', val_metrics[key])
 
         for key in best_metric_values:
             if key not in best_metric_values or val_metrics[key] < best_metric_values[key]:
                 best_metric_values[key] = val_metrics[key]
                 save_model(model, model_name + f'_{key}')
         print()
+        
+        if use_tensorboard:
+            for key in train_losses:
+                summary_writer.add_scalar('epoch_' + key, train_losses[key], epoch)
+            for key in val_losses:
+                summary_writer.add_scalar('epoch_val_' + key, val_losses[key], epoch)
+            for key in val_metrics:
+                summary_writer.add_scalar('epoch_val_' + key, val_metrics[key], epoch)
+        
+        # time_epoch_end = time()
+        # print('time for epoch =', time_epoch_end - time_epoch_start)
 
         # if (epoch + 1) % save_step == 0:
         #     save_model(model, model_name)

@@ -1,6 +1,7 @@
 from torch import nn
 import custom_losses
 from custom_losses.losses import (
+    ncc_loss,
     cross_correlation_loss,
     ssim_loss,
     dice_loss,
@@ -22,6 +23,17 @@ class CrossCorrelationLoss(nn.Module):
                                           n=self.n, use_gpu=self.use_gpu)
         return cross_correlation_loss(pred, target,
                                       n=self.n, use_gpu=self.use_gpu)
+    
+
+class NCCLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, pred, target):
+        if pred.shape[1] == 2:
+            return ncc_loss(pred[:, :1] * pred[:, 1:],
+                            target[:, :1] * target[:, 1:])
+        return ncc_loss(pred, target)
 
 
 class SSIMLoss(nn.Module):

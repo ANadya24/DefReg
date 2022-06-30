@@ -14,7 +14,7 @@ class Dataset(data.Dataset):
     def __init__(self, image_sequences, image_keypoints,
                  im_size=(1, 256, 256),
                  train=True, register_limit=5,
-                 use_masks=True, use_crop=False):
+                 use_masks=True, use_crop=False, multiply_mask=True):
         """
 
         :param: image_sequences:
@@ -27,8 +27,10 @@ class Dataset(data.Dataset):
         """
         self.image_sequences = []
         self.image_keypoints = []
+        self.points_length = []
         self.image_masks = []
         self.use_masks = use_masks
+        self.multiply_mask = multiply_mask
         self.use_crop = use_crop
         self.train = train
         self.im_size = im_size[1:]
@@ -77,8 +79,16 @@ class Dataset(data.Dataset):
 
                 lines = np.concatenate((line1, line2, line3, line4), axis=1)
                 lines = np.pad(lines, np.array([0, 0, 0, MAX_LINE_LEN - lines.shape[1], 0, 0]).reshape(-1, 2))
-                lines_lengths = np.array([len1, len2, len3, len4])
-                self.image_keypoints.append({'inner': inner, 'bound': bound, 'lines': (lines, lines_lengths)})
+                lines_lengths = [len1, len2, len3, len4]
+                
+                inner_len = len(inner[0])
+                bound_len = len(bound[0])
+                points_len = np.array([inner_len, bound_len, *lines_lengths])
+                points = np.concatenate([inner, bound, lines], axis=1)
+                self.image_keypoints.append(points)
+                self.points_length.append(points_len)
+                
+                # self.image_keypoints.append({'inner': inner, 'bound': bound, 'lines': (lines, lines_lengths)})
 
         self.seq_numeration = []
         for seq_idx, _ in enumerate(self.image_sequences):
@@ -145,54 +155,45 @@ class Dataset(data.Dataset):
         if self.use_masks:
             mask1 = self.image_masks[seq_idx][it].squeeze()
             mask2 = self.image_masks[seq_idx][it2].squeeze()
+            image1 = np.stack([image1, mask1], -1)
+            image2 = np.stack([image2, mask2], -1)
+            
         if not self.train:
-            inner1 = np.array(self.image_keypoints[seq_idx]['inner'][it]).reshape(-1, 2)
-            inner2 = np.array(self.image_keypoints[seq_idx]['inner'][it2]).reshape(-1, 2)
-            bound1 = np.array(self.image_keypoints[seq_idx]['bound'][it]).reshape(-1, 2)
-            bound2 = np.array(self.image_keypoints[seq_idx]['bound'][it2]).reshape(-1, 2)
-            lines1 = np.array(self.image_keypoints[seq_idx]['lines'][0][it]).reshape(-1, 2)
-            lines_len = self.image_keypoints[seq_idx]['lines'][1]
-            lines2 = np.array(self.image_keypoints[seq_idx]['lines'][0][it2]).reshape(-1, 2)
-        h, w = image1.shape
+            points_len = self.points_length[seq_idx]
+            points1 = self.image_keypoints[seq_idx][it]
+            points2 = self.image_keypoints[seq_idx][it2]
+            
+        h, w = image1.shape[:2]
 
         if self.use_crop:
             x0 = np.random.randint(0, w - self.im_size[1])
             y0 = np.random.randint(0, h - self.im_size[0])
             image1 = image1[y0: y0 + self.im_size[0], x0:x0 + self.im_size[1]]
             image2 = image2[y0: y0 + self.im_size[0], x0:x0 + self.im_size[1]]
-            if self.use_masks:
-                mask1 = mask1[y0: y0 + self.im_size[0], x0:x0 + self.im_size[1]]
-                mask2 = mask2[y0: y0 + self.im_size[0], x0:x0 + self.im_size[1]]
+            # if self.use_masks:
+            #     mask1 = mask1[y0: y0 + self.im_size[0], x0:x0 + self.im_size[1]]
+            #     mask2 = mask2[y0: y0 + self.im_size[0], x0:x0 + self.im_size[1]]
             if not self.train:
-                inner1 -= np.array([x0, y0]).reshape(1, 2)
-                inner2 -= np.array([x0, y0]).reshape(1, 2)
-                bound1 -= np.array([x0, y0]).reshape(1, 2)
-                bound2 -= np.array([x0, y0]).reshape(1, 2)
-                lines1 -= np.array([x0, y0]).reshape(1, 2)
-                lines2 -= np.array([x0, y0]).reshape(1, 2)
+                points1 -= np.array([x0, y0]).reshape(1, 2)
+                points2 -= np.array([x0, y0]).reshape(1, 2)
+
         else:
-            h, w = image1.shape
 
             if h != w:
                 if h < w:
-                    image1 = pad_image(image1, (0, w - h, 0, 0))
-                    image2 = pad_image(image2, (0, w - h, 0, 0))
-                    if self.use_masks:
-                        mask1 = pad_image(mask1, (0, w - h, 0, 0))
-                        mask2 = pad_image(mask2, (0, w - h, 0, 0))
+                    pad_params = (0, w-h, 0, 0)
                 else:
-                    image1 = pad_image(image1, (0, 0, 0, h - w))
-                    image2 = pad_image(image2, (0, 0, 0, h - w))
-                    if self.use_masks:
-                        mask1 = pad_image(mask1, (0, 0, 0, h - w))
-                        mask2 = pad_image(mask2, (0, 0, 0, h - w))
-
-        if not self.train:
-            inner_len1 = len(inner1)
-            bound_len1 = len(bound1)
-            points_len = np.array([inner_len1, bound_len1, *lines_len])
-            points1 = np.concatenate([inner1, bound1, lines1], axis=0).astype(np.float32)
-
+                    pad_params = (0, 0, 0, h - w)
+                    
+                if len(image1.shape) > 2:
+                    pad_params = pad_params + (0,0)
+                    
+                image1 = pad_image(image1, pad_params)
+                image2 = pad_image(image2, pad_params)
+                # if self.use_masks:
+                #     mask1 = pad_image(mask1, pad_params)
+                #     mask2 = pad_image(mask2, pad_params)
+               
         resize_dict = {'image': image1}
         if not self.train:
             resize_dict['keypoints'] = points1
@@ -204,68 +205,64 @@ class Dataset(data.Dataset):
         if not self.train:
             points1 = np.array(data1['keypoints'], dtype=np.float32)
             points1 = np.clip(points1, 0., self.im_size[1] - 1)
-        if self.use_masks:
-            mask1 = data1['mask']
-
-        if not self.train:
-            inner_len2 = len(inner2)
-            bound_len2 = len(bound2)
-            assert inner_len2 == inner_len1
-            assert bound_len2 == bound_len1
-            points2 = np.concatenate([inner2, bound2, lines2], axis=0).astype(np.float32)
+        # if self.use_masks:
+        #     mask1 = data1['mask']
 
         resize_dict = {'image': image2}
         if not self.train:
             resize_dict['keypoints'] = points2
-        if self.use_masks:
-            resize_dict['mask'] = mask2
+        # if self.use_masks:
+        #     resize_dict['mask'] = mask2
         data2 = self.resize(**resize_dict)
 
         image2 = data2['image']
         if not self.train:
             points2 = np.array(data2['keypoints'], dtype=np.float32)
             points2 = np.clip(points2, 0., self.im_size[1] - 1)
-        if self.use_masks:
-            mask2 = data2['mask']
+        # if self.use_masks:
+        #     mask2 = data2['mask']
 
         if self.train:
             h, w = self.im_size
             if np.random.rand() < 0.5:
                 image1 = image1[:, ::-1].copy()
                 image2 = image2[:, ::-1].copy()
-                if self.use_masks:
-                    mask1 = mask1[:, ::-1].copy()
-                    mask2 = mask2[:, ::-1].copy()
+                # if self.use_masks:
+                #     mask1 = mask1[:, ::-1].copy()
+                #     mask2 = mask2[:, ::-1].copy()
                 # points1[:, 0] = w - 1 - points1[:, 0]
                 # points2[:, 0] = w - 1 - points2[:, 0]
 
             if np.random.rand() < 0.5:
                 image1 = image1[::-1].copy()
                 image2 = image2[::-1].copy()
-                if self.use_masks:
-                    mask1 = mask1[::-1].copy()
-                    mask2 = mask2[::-1].copy()
+                # if self.use_masks:
+                #     mask1 = mask1[::-1].copy()
+                #     mask2 = mask2[::-1].copy()
                 # points1[:, 1] = h - 1 - points1[:, 1]
                 # points2[:, 1] = h - 1 - points2[:, 1]
-            if self.use_masks:
-                data = self.aug_pipe(image=image1.astype(np.float32),
-                                     mask=mask1.astype(np.float32),  # keypoints=points1,
-                                     image2=image2.astype(np.float32),
-                                     mask2=mask2.astype(np.float32), )  # keypoints2=points2)
-                image1, mask1 = data['image'], data['mask']
-                image2, mask2 = data['image2'], data['mask2']
-            else:
-                data = self.aug_pipe(image=image1.astype(np.float32),  # keypoints=points1,
-                                     image2=image2.astype(np.float32), )  # keypoints2=points2)
-                image1 = data['image']
-                image2 = data['image2']
+            # if self.use_masks:
+            #     data = self.aug_pipe(image=image1.astype(np.float32),
+            #                          mask=mask1.astype(np.float32),  # keypoints=points1,
+            #                          image2=image2.astype(np.float32),
+            #                          mask2=mask2.astype(np.float32), )  # keypoints2=points2)
+            #     image1, mask1 = data['image'], data['mask']
+            #     image2, mask2 = data['image2'], data['mask2']
+            # else:
+            data = self.aug_pipe(image=image1.astype(np.float32),  # keypoints=points1,
+                                 image2=image2.astype(np.float32), )  # keypoints2=points2)
+            image1 = data['image']
+            image2 = data['image2']
+        if self.use_masks and self.multiply_mask:
+            image1 = image1[:,:,0] * image1[:,:,1]
+            image2 = image2[:,:,0] * image2[:,:,1]
 
         image1 = self.to_tensor(image1).float()
         image2 = self.to_tensor(image2).float()
 
-        if self.use_masks:
-            image1 = torch.cat([image1, torch.Tensor(mask1).float()[None]], 0)
-            image2 = torch.cat([image2, torch.Tensor(mask2).float()[None]], 0)
+        # if self.use_masks:
+        #     image1 = torch.cat([image1, torch.Tensor(mask1).float()[None]], 0)
+        #     image2 = torch.cat([image2, torch.Tensor(mask2).float()[None]], 0)
 
         if self.train:
             return image1, image2

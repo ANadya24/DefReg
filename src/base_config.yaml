@@ -27,6 +27,8 @@ dataset:
   train: true
   use_crop: false
   use_masks: true
+  multiply_mask: true
+  
 device: cuda:0
 expdir: ../DefReg/src
 load_epoch: 0
@@ -42,22 +44,13 @@ num_workers: 4
 optimizer:
   lr: 0.0001
   name: Adam
-  parameters:
-    betas: !!python/tuple
-    - 0.9
-    - 0.999
-    eps: 1.0e-08
-    weight_decay: 0
+  parameters: {}
 save_step: 20
 savedir: ../DefReg/logs/test_exp
 scheduler:
   name: ReduceLROnPlateau
-  parameters:
-    factor: 0.1
-    mode: min
-    patience: 10
-    threshold: 0.0001
-    threshold_mode: rel
+  parameters: {}
+
 tensorboard: true
 val_dataset:
   im_size: !!python/tuple
@@ -70,3 +63,4 @@ val_dataset:
   train: false
   use_crop: false
   use_masks: true
+  multiply_mask: true

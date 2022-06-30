@@ -18,7 +18,7 @@ class DefRegNet(nn.Module):
 
         #################################
         self.localization = nn.Sequential(
-            nn.Conv2d(in_channels*2, 6, kernel_size=(7, 7)),
+            nn.Conv2d(in_channels, 6, kernel_size=(7, 7)),
             nn.MaxPool2d(2, stride=2),
             nn.ReLU(True),
             nn.Conv2d(6, 10, kernel_size=(5, 5)),
@@ -37,7 +37,7 @@ class DefRegNet(nn.Module):
         self.fc_loc[2].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
         ####################################################################
 
-        self.unet = UNet(in_channels*2, 2)
+        self.unet = UNet(in_channels, 2)
         self.spatial_transform = SpatialTransformation(device=device)
         self.unet.apply(init_weights)
 
@@ -61,15 +61,29 @@ class DefRegNet(nn.Module):
         return y, theta
 
     def forward(self, batch_moving, batch_fixed):
-        batch_moving, theta = self.stn(batch_fixed, batch_moving)
-        diff = batch_fixed - batch_moving
-        x = torch.cat([batch_moving, batch_fixed], dim=1)
+        batch_affine_moving, theta = self.stn(batch_fixed, batch_moving)
+        # diff = batch_fixed - batch_moving
+        x = torch.cat([batch_affine_moving, batch_fixed], dim=1)
         batch_deformation = self.unet(x)
-        batch_registered = self.spatial_transform(batch_moving,
+        batch_registered = self.spatial_transform(batch_affine_moving,
                                                   batch_deformation)
+        # print('batch_deformation', batch_deformation.min(), batch_deformation.max())
+        # print('batch_registered', batch_registered.min(), batch_registered.max())
 
         output = {'batch_registered': batch_registered,
                   'batch_deformation': batch_deformation,
                   'theta': theta,
-                  'affine_trf_diff': diff}
+                  'affine_trf_registered': batch_affine_moving}
+        items = list(output.keys())
+        for item in items:
+            if torch.isnan(output[item]).any():
+                print('batch_moving', batch_moving.min(), batch_moving.max())
+                print('batch_fixed', batch_fixed.min(), batch_fixed.max())
+                print(batch_deformation.grad)
+                print(batch_registered.grad)
+                print(theta.grad)
+                print(batch_affine_moving.grad)
+                output['nans'] = True
+            else: output['nans'] = False
+        
         return output

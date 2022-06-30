@@ -47,6 +47,7 @@ if __name__ == "__main__":
         print(f"Successfuly loaded state_dict from {config.model_path}")
 
     model = model.to(config.device)
+    
     # if use_gpu:
     #     if torch.cuda.device_count() > 1:
     #         print("Let's use", torch.cuda.device_count(), "GPUs!")
@@ -60,7 +61,8 @@ if __name__ == "__main__":
                             train=config.dataset.train,
                             register_limit=config.dataset.register_limit,
                             use_crop=config.dataset.use_crop,
-                            use_masks=config.dataset.use_masks)
+                            use_masks=config.dataset.use_masks,
+                            multiply_mask=config.dataset.multiply_mask)
 
     val_dataset = Dataset(image_sequences=config.val_dataset.image_sequences,
                           image_keypoints=config.val_dataset.image_keypoints,
@@ -68,7 +70,8 @@ if __name__ == "__main__":
                           train=config.val_dataset.train,
                           register_limit=config.val_dataset.register_limit,
                           use_crop=config.val_dataset.use_crop,
-                          use_masks=config.val_dataset.use_masks)
+                          use_masks=config.val_dataset.use_masks,
+                          multiply_mask=config.val_dataset.multiply_mask)
 
     print("Length of train set:", len(train_dataset))
     print("Length of validation set:", len(val_dataset))
@@ -76,20 +79,22 @@ if __name__ == "__main__":
     # Data loader
     params = {'batch_size': config.batch_size,
               'num_workers': config.num_workers,
+              'shuffle': False,
               'pin_memory': True}
     training_generator = data.DataLoader(train_dataset, **params)
     validation_generator = data.DataLoader(val_dataset, **params)
-
     optimizer = getattr(torch.optim, config.optimizer.name)(
         model.parameters(), **config.optimizer.parameters, lr=config.optimizer.lr)
 
     if config.load_epoch:
         assert checkpoint is not None
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-
+    
     if config.scheduler is not None:
         scheduler = getattr(torch.optim.lr_scheduler,
                             config.scheduler.name)(optimizer=optimizer, **config.scheduler.parameters)
+    else:
+        scheduler = None
 
     loss = CustomCriterion(config.criterion)
     

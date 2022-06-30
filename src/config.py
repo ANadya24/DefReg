@@ -18,6 +18,7 @@ class DatasetConfig(BaseModel):
     register_limit: Union[List[int], int] = 5
     use_masks: bool = True
     use_crop: bool = False
+    multiply_mask: bool = True
 
 
 class LossConfig(BaseModel):
@@ -47,19 +48,13 @@ class CriterionConfig(BaseModel):
 
 class SchedulerConfig(BaseModel):
     name: str = torch.optim.lr_scheduler.ReduceLROnPlateau.__name__
-    parameters: Dict[str, Any] = {'mode': 'min',
-                                  'factor': 0.1,
-                                  'patience': 10,
-                                  'threshold': 0.0001,
-                                  'threshold_mode': 'rel'}
+    parameters: Dict[str, Any] = {}
 
 
 class OptimizerConfig(BaseModel):
     name: str = torch.optim.Adam.__name__
     lr: float = 1e-4
-    parameters: Dict[str, Any] = {'betas': (0.9, 0.999),
-                                  'eps': 1e-08,
-                                  'weight_decay': 0}
+    parameters: Dict[str, Any] = {}
 
 
 class Config(BaseModel):
