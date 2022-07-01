@@ -8,6 +8,7 @@ from custom_losses.losses import (
     deformation_smoothness_loss
 )
 from src.config import CriterionConfig
+import torch.nn
 
 
 class CrossCorrelationLoss(nn.Module):
@@ -73,7 +74,11 @@ class CustomCriterion(nn.Module):
         self.input_keys = dict()
 
         for loss in criterion_config.losses:
-            self.losses.append((getattr(custom_losses, loss.loss_name)(**loss.loss_parameters),
+            try:
+                self.losses.append((getattr(custom_losses, loss.loss_name)(**loss.loss_parameters),
+                                    loss.weight, loss.input_keys, loss.loss_name, loss.return_loss))
+            except:
+                self.losses.append((getattr(torch.nn, loss.loss_name)(**loss.loss_parameters),
                                 loss.weight, loss.input_keys, loss.loss_name, loss.return_loss))
 
     def forward(self, input_dict):

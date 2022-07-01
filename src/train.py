@@ -57,8 +57,6 @@ def train_model(input_batch: torch.Tensor,
     
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
 
-    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
-
     optimizer.step()
 
     if (epoch + 1) % save_step == 0:
@@ -83,6 +81,9 @@ def apply_deformation_2points(batch_points: torch.Tensor,
     for i, deformation in enumerate(batch_deformation):
         y, x = torch.meshgrid(torch.arange(h),
                               torch.arange(w))
+        y = y.to(deformation.device)
+        x = x.to(deformation.device)
+        
         x = x + deformation[0]
         y = y + deformation[1]
 
@@ -181,10 +182,13 @@ def validate_model(input_batch: torch.Tensor,
 
     if return_point_metrics:
         points_fixed, points_moving, points_len = input_batch[2:]
+        
         registered_points = apply_deformation_2points(
-            points_moving,
-            output_dict['batch_deformation'].permute(0, 2, 3, 1))
-        metrics = calculate_point_metrics(points_fixed, registered_points, points_len)
+            points_moving.to(device),
+            output_dict['batch_deformation'])
+        metrics = calculate_point_metrics(points_fixed, 
+                                          registered_points.to(points_fixed.device), 
+                                          points_len)
         metrics2 = calculate_point_metrics(points_fixed, points_moving, points_len)
         metrics['points_error_l2_prev'] = metrics2['points_error_l2']
         return losses, metrics
@@ -205,25 +209,25 @@ def train(model: torch.nn.Module,
           max_epochs: int = 1000,
           use_tensorboard: bool = False,
           ):
-    def save_model(model, name=model_name + f'_stop'):
+    def save_model(model, name):
         if isinstance(model, torch.nn.DataParallel):
             torch.save({
                 'model': model.module,
                 'model_state_dict': model.module.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict()},
-                save_dir + name + f'_{epoch + 1}')
+                save_dir + name)
         else:
             torch.save({
                 'model': model,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict()},
-                save_dir + name + f'{epoch + 1}')
-        print(f"Successfuly saved state_dict in {save_dir + model_name + f'_stop_{epoch + 1}'}")
+                save_dir + name)
+        print(f"Successfuly saved state_dict in {save_dir + name}")
 
     def sig_handler(signum, frame):
         print('Saved intermediate result!')
         torch.cuda.synchronize()
-        save_model(model)
+        save_model(model, model_name + f'_stop_{epoch}')
 
     signal.signal(signal.SIGINT, sig_handler)
 
