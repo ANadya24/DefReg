@@ -54,6 +54,8 @@ def train_model(input_batch: torch.Tensor,
     losses = loss(output_dict)
     train_loss = losses['total_loss']
     train_loss.backward()
+    
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
 
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
 
@@ -63,6 +65,7 @@ def train_model(input_batch: torch.Tensor,
         save_validation_images(batch_fixed, batch_moving, output_dict['batch_registered'],
                                output_dict['batch_deformation'], None,
                                image_dir=image_dir, epoch=epoch + 1, train=True)
+    losses['nans'] = output_dict['nans']
 
     return losses
 
@@ -180,8 +183,10 @@ def validate_model(input_batch: torch.Tensor,
         points_fixed, points_moving, points_len = input_batch[2:]
         registered_points = apply_deformation_2points(
             points_moving,
-            output_dict['batch_deformation'])
+            output_dict['batch_deformation'].permute(0, 2, 3, 1))
         metrics = calculate_point_metrics(points_fixed, registered_points, points_len)
+        metrics2 = calculate_point_metrics(points_fixed, points_moving, points_len)
+        metrics['points_error_l2_prev'] = metrics2['points_error_l2']
         return losses, metrics
     return losses
 
@@ -279,7 +284,7 @@ def train(model: torch.nn.Module,
         if nan_flag:
             print('found nans in network outputs in the epoch', epoch)
             break
-
+        
         # Testing
         total = 0
         # time_batches = 0
@@ -335,7 +340,7 @@ def train(model: torch.nn.Module,
         for key in val_metrics:
             print('Epoch', epoch + 1, f'{key} error: ', val_metrics[key])
 
-        for key in best_metric_values:
+        for key in val_metrics:
             if key not in best_metric_values or val_metrics[key] < best_metric_values[key]:
                 best_metric_values[key] = val_metrics[key]
                 save_model(model, model_name + f'_{key}')

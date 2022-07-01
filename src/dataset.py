@@ -67,20 +67,20 @@ class Dataset(data.Dataset):
                 bound = bound[:, :, :2]
                 inner = inner[:, :, :2]
 
-                #                 line1 = np.stack(poi['lines'][:, 0])
-                #                 line2 = np.stack(poi['lines'][:, 1])
-                #                 line3 = np.stack(poi['lines'][:, 2])
-                #                 line4 = np.stack(poi['lines'][:, 3])
+#                 line1 = np.stack(poi['lines'][:, 0])
+#                 line2 = np.stack(poi['lines'][:, 1])
+#                 line3 = np.stack(poi['lines'][:, 2])
+#                 line4 = np.stack(poi['lines'][:, 3])
 
-                #                 len1 = len(line1[0])
-                #                 len2 = len(line2[0])
-                #                 len3 = len(line3[0])
-                #                 len4 = len(line4[0])
+#                 len1 = len(line1[0])
+#                 len2 = len(line2[0])
+#                 len3 = len(line3[0])
+#                 len4 = len(line4[0])
 
-                #                 lines = np.concatenate((line1, line2, line3, line4), axis=1)
-                #                 lines = np.pad(lines, np.array([0, 0, 0, MAX_LINE_LEN - lines.shape[1], 0, 0]).reshape(-1, 2))
-                #                 lines_lengths = [len1, len2, len3, len4]
-
+#                 lines = np.concatenate((line1, line2, line3, line4), axis=1)
+#                 lines = np.pad(lines, np.array([0, 0, 0, MAX_LINE_LEN - lines.shape[1], 0, 0]).reshape(-1, 2))
+#                 lines_lengths = [len1, len2, len3, len4]
+                
                 inner_len = len(inner[0])
                 bound_len = len(bound[0])
                 # points_len = np.array([inner_len, bound_len, *lines_lengths])

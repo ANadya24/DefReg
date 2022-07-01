@@ -81,15 +81,26 @@ class DefRegNet(nn.Module):
                 print('batch_moving', batch_moving.min(), batch_moving.max())
                 print('batch_fixed', batch_fixed.min(), batch_fixed.max())
                 print()
-                print('unet', torch.isnan(self.unet.parameters()).any())
-                print('spatial_transform', torch.isnan(self.spatial_transform.parameters()).any())
-                print('localization', torch.isnan(self.localization.parameters()).any())
-                print('fc_loc', torch.isnan(self.fc_loc.parameters()).any())
+                nans = False
+                for param in self.unet.parameters():
+                    nans += torch.isnan(param).any()
+                print('unet', nans)
+                
+                nans = False
+                for param in self.spatial_transform.parameters():
+                    nans += torch.isnan(param).any()
+                print('spatial_transform', nans)
+                
+                nans = False
+                for param in self.localization.parameters():
+                    nans += torch.isnan(param).any()
+                print('localization', nans)
+                
+                nans = False
+                for param in self.fc_loc.parameters():
+                    nans += torch.isnan(param).any()
+                print('fc_loc', nans)
                 print()
-                print(batch_deformation.grad)
-                print(batch_registered.grad)
-                print(theta.grad)
-                print(batch_affine_moving.grad)
                 nan_flag = True
         output['nans'] = nan_flag
 
