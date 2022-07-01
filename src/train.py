@@ -65,33 +65,56 @@ def train_model(input_batch: torch.Tensor,
     return losses
 
 
-def apply_deformation_2points(batch_points, batch_deformation):
-    if isinstance(batch_points, torch.Tensor):
-        batch_points = batch_points.detach().cpu().numpy()
-    if isinstance(batch_deformation, torch.Tensor):
-        batch_deformation = batch_deformation.detach().cpu().numpy()
+def apply_deformation_2points(batch_points: torch.Tensor,
+                              batch_deformation: torch.Tensor,
+                              num_points_interpolation=4):
+    # if isinstance(batch_points, np.ndarray):
+    #     batch_points = torch.Tensor(batch_points).to(device)
+    #
+    # if isinstance(batch_deformation, np.ndarray):
+    #     batch_deformation = torch.Tensor(batch_deformation).to(device)
+    b, ch, h, w = batch_deformation.shape
 
-    deformed_points = np.zeros_like(batch_points)
-    for i in range(len(batch_points)):
-        deformation = batch_deformation[i]
-        deformed_points[i] = dots_remap_bcw(batch_points[i].copy(), deformation.copy())
+    for i, deformation in enumerate(batch_deformation):
+        y, x = torch.meshgrid(torch.arange(h),
+                              torch.arange(w))
+        x = x + deformation[0]
+        y = y + deformation[1]
 
-    return deformed_points
+        deformation *= -1.
+
+        distance_map = ((x[..., None] - batch_points[i, None, None, :, 0]) ** 2 +
+                        (y[..., None] - batch_points[i, None, None, :, 1]) ** 2) ** 0.5
+        distance_map = distance_map.reshape(-1, len(batch_points[0]))
+        idxs = torch.topk(distance_map, dim=0, k=num_points_interpolation,
+                          largest=False, sorted=False)[1]
+        fx = torch.take(deformation[0], idxs.reshape(-1)).reshape(-1, len(batch_points[0])).sum(dim=0)
+        fx /= num_points_interpolation
+
+        fy = torch.take(deformation[1], idxs.reshape(-1)).reshape(-1, len(batch_points[0])).sum(dim=0)
+        fy /= num_points_interpolation
+
+        batch_points[i, :, 0] += fx
+        batch_points[i, :, 1] += fy
+
+    batch_points[..., 0] = torch.clip(batch_points[..., 0], 0, w)
+    batch_points[..., 1] = torch.clip(batch_points[..., 1], 0, h)
+    return batch_points
 
 
-def calculate_point_metrics(batch_points1: Union[torch.Tensor, np.ndarray],
-                            batch_points2: Union[torch.Tensor, np.ndarray],
-                            batch_points_len: Union[torch.Tensor, np.ndarray]):
-    if isinstance(batch_points1, torch.Tensor):
-        batch_points1 = batch_points1.detach().cpu().numpy()
-    if isinstance(batch_points2, torch.Tensor):
-        batch_points2 = batch_points2.detach().cpu().numpy()
-    if isinstance(batch_points_len, torch.Tensor):
-        batch_points_len = batch_points_len.detach().cpu().numpy()
+def calculate_point_metrics(batch_points1: torch.Tensor,
+                            batch_points2: torch.Tensor,
+                            batch_points_len: torch.Tensor):
+    # if isinstance(batch_points1, torch.Tensor):
+    #     batch_points1 = batch_points1.detach().cpu().numpy()
+    # if isinstance(batch_points2, torch.Tensor):
+    #     batch_points2 = batch_points2.detach().cpu().numpy()
+    # if isinstance(batch_points_len, torch.Tensor):
+    #     batch_points_len = batch_points_len.detach().cpu().numpy()
 
     error = ((((batch_points1 - batch_points2) ** 2).sum(axis=2)) ** 0.5).sum(axis=1) / batch_points_len.sum(axis=1)
     
-    output = {'points_error_l2': np.mean(error)}
+    output = {'points_error_l2': torch.mean(error)}
 
 #         inner1 = points1[:points_len[0]]
 #         inner2 = points2[:points_len[0]]
