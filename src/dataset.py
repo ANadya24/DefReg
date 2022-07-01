@@ -7,7 +7,7 @@ from scipy import io as spio
 import albumentations as A
 from utils.data_process import pad_image, match_histograms, normalize_mean_std, normalize_min_max
 
-MAX_LINE_LEN = 1300
+MAX_LINE_LEN = 20
 
 
 class Dataset(data.Dataset):
@@ -67,27 +67,29 @@ class Dataset(data.Dataset):
                 bound = bound[:, :, :2]
                 inner = inner[:, :, :2]
 
-                line1 = np.stack(poi['lines'][:, 0])
-                line2 = np.stack(poi['lines'][:, 1])
-                line3 = np.stack(poi['lines'][:, 2])
-                line4 = np.stack(poi['lines'][:, 3])
+                #                 line1 = np.stack(poi['lines'][:, 0])
+                #                 line2 = np.stack(poi['lines'][:, 1])
+                #                 line3 = np.stack(poi['lines'][:, 2])
+                #                 line4 = np.stack(poi['lines'][:, 3])
 
-                len1 = len(line1[0])
-                len2 = len(line2[0])
-                len3 = len(line3[0])
-                len4 = len(line4[0])
+                #                 len1 = len(line1[0])
+                #                 len2 = len(line2[0])
+                #                 len3 = len(line3[0])
+                #                 len4 = len(line4[0])
 
-                lines = np.concatenate((line1, line2, line3, line4), axis=1)
-                lines = np.pad(lines, np.array([0, 0, 0, MAX_LINE_LEN - lines.shape[1], 0, 0]).reshape(-1, 2))
-                lines_lengths = [len1, len2, len3, len4]
-                
+                #                 lines = np.concatenate((line1, line2, line3, line4), axis=1)
+                #                 lines = np.pad(lines, np.array([0, 0, 0, MAX_LINE_LEN - lines.shape[1], 0, 0]).reshape(-1, 2))
+                #                 lines_lengths = [len1, len2, len3, len4]
+
                 inner_len = len(inner[0])
                 bound_len = len(bound[0])
-                points_len = np.array([inner_len, bound_len, *lines_lengths])
-                points = np.concatenate([inner, bound, lines], axis=1)
+                # points_len = np.array([inner_len, bound_len, *lines_lengths])
+                # points = np.concatenate([inner, bound, lines], axis=1)
+                points_len = np.array([inner_len, bound_len])
+                points = np.concatenate([inner, bound], axis=1)
                 self.image_keypoints.append(points)
                 self.points_length.append(points_len)
-                
+
                 # self.image_keypoints.append({'inner': inner, 'bound': bound, 'lines': (lines, lines_lengths)})
 
         self.seq_numeration = []
@@ -113,15 +115,15 @@ class Dataset(data.Dataset):
                                                 # A.RandomResizedCrop(self.im_size[1], self.im_size[0]),
                                                 A.ShiftScaleRotate(shift_limit=0.0225, scale_limit=0.1,
                                                                    rotate_limit=5)], p=0.2)],
-                                      additional_targets={'image2': 'image',# 'keypoints2': 'keypoints',
-                                                          'mask2': 'mask'},)
-                                      #keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
+                                      additional_targets={'image2': 'image',  # 'keypoints2': 'keypoints',
+                                                          'mask2': 'mask'}, )
+            # keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
 
         self.to_tensor = ToTensor()
-        
+
         if self.train:
             self.resize = A.Resize(*self.im_size)
-        else:                    
+        else:
             self.resize = A.Compose([A.Resize(*self.im_size)],
                                     keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
 
@@ -157,12 +159,12 @@ class Dataset(data.Dataset):
             mask2 = self.image_masks[seq_idx][it2].squeeze()
             image1 = np.stack([image1, mask1], -1)
             image2 = np.stack([image2, mask2], -1)
-            
+
         if not self.train:
             points_len = self.points_length[seq_idx]
             points1 = self.image_keypoints[seq_idx][it]
             points2 = self.image_keypoints[seq_idx][it2]
-            
+
         h, w = image1.shape[:2]
 
         if self.use_crop:
@@ -181,19 +183,19 @@ class Dataset(data.Dataset):
 
             if h != w:
                 if h < w:
-                    pad_params = (0, w-h, 0, 0)
+                    pad_params = (0, w - h, 0, 0)
                 else:
                     pad_params = (0, 0, 0, h - w)
-                    
+
                 if len(image1.shape) > 2:
-                    pad_params = pad_params + (0,0)
-                    
+                    pad_params = pad_params + (0, 0)
+
                 image1 = pad_image(image1, pad_params)
                 image2 = pad_image(image2, pad_params)
                 # if self.use_masks:
                 #     mask1 = pad_image(mask1, pad_params)
                 #     mask2 = pad_image(mask2, pad_params)
-               
+
         resize_dict = {'image': image1}
         if not self.train:
             resize_dict['keypoints'] = points1
@@ -254,8 +256,8 @@ class Dataset(data.Dataset):
             image1 = data['image']
             image2 = data['image2']
         if self.use_masks and self.multiply_mask:
-            image1 = image1[:,:,0] * image1[:,:,1]
-            image2 = image2[:,:,0] * image2[:,:,1]
+            image1 = image1[:, :, 0] * image1[:, :, 1]
+            image2 = image2[:, :, 0] * image2[:, :, 1]
 
         image1 = self.to_tensor(image1).float()
         image2 = self.to_tensor(image2).float()

@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 from basic_nets.spatial_transform import SpatialTransformation
 from basic_nets.unet import UNet
 from basic_nets.utils import init_weights
@@ -13,6 +12,7 @@ class DefRegNet(nn.Module):
     Network for image registration: outputs the deformation
     field and the affine matrix.
     """
+
     def __init__(self, in_channels, image_size=128, device='cpu'):
         super(DefRegNet, self).__init__()
 
@@ -74,16 +74,23 @@ class DefRegNet(nn.Module):
                   'batch_deformation': batch_deformation,
                   'theta': theta,
                   'affine_trf_registered': batch_affine_moving}
+        nan_flag = False
         items = list(output.keys())
         for item in items:
             if torch.isnan(output[item]).any():
                 print('batch_moving', batch_moving.min(), batch_moving.max())
                 print('batch_fixed', batch_fixed.min(), batch_fixed.max())
+                print()
+                print('unet', torch.isnan(self.unet.parameters()).any())
+                print('spatial_transform', torch.isnan(self.spatial_transform.parameters()).any())
+                print('localization', torch.isnan(self.localization.parameters()).any())
+                print('fc_loc', torch.isnan(self.fc_loc.parameters()).any())
+                print()
                 print(batch_deformation.grad)
                 print(batch_registered.grad)
                 print(theta.grad)
                 print(batch_affine_moving.grad)
-                output['nans'] = True
-            else: output['nans'] = False
-        
+                nan_flag = True
+        output['nans'] = nan_flag
+
         return output
