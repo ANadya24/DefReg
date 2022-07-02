@@ -363,3 +363,5 @@ def train(model: torch.nn.Module,
 
         # if (epoch + 1) % save_step == 0:
         #     save_model(model, model_name)
+
+    save_model(model, model_name + '_last')

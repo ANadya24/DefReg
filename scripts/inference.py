@@ -1,6 +1,7 @@
+from typing import cast
 import os
 import numpy as np
-from glob import glob
+import argparse
 import skimage.io as io
 from skimage import color
 from skimage.transform import resize
@@ -9,9 +10,15 @@ import torch
 from torchvision.transforms import ToTensor
 import albumentations as A
 
+from scripts.inference_config import InferenceConfig
+from src.config import load_yaml
 from models.defregnet_model import DefRegNet
 from basic_nets.spatial_transform import SpatialTransformation
-from utils.data_process import pad_image, match_histograms, normalize_mean_std
+from utils.data_process import (
+    pad_image, match_histograms,
+    normalize_min_max,
+    normalize_mean_std
+)
 
 
 use_gpu = torch.cuda.is_available()
@@ -19,10 +26,9 @@ devices = ['cpu', 'cuda']
 device = devices[use_gpu]
 
 
-def preprocess_image_pair(image1, image2, im_size,
-                          use_masks=False, mask1=None, mask2=None):
+def preprocess_image_pair(image1, image2, config: InferenceConfig, mask1=None, mask2=None):
     to_tensor = ToTensor()
-    resizer = A.Resize(im_size)
+    resizer = A.Resize(*config.im_size[1:])
 
     if image1.shape[-1] == 3:
         image1 = color.rgb2gray(image1)
@@ -30,48 +36,53 @@ def preprocess_image_pair(image1, image2, im_size,
     if image2.shape[-1] == 3:
         image1 = color.rgb2gray(image1)
 
-    image1 = normalize_mean_std(image1)
-    image2 = normalize_mean_std(image2)
+    if config.normalization == 'min_max':
+        image1 = normalize_min_max(image1)
+        image2 = normalize_min_max(image2)
+    else:
+        image1 = normalize_mean_std(image1)
+        image2 = normalize_mean_std(image2)
 
     image1, image2, _ = match_histograms(image1, image2, random_switch=False)
     h, w = image1.shape
 
     if h != w:
         if h < w:
-            image1 = pad_image(image1, (0, w - h, 0, 0))
-            image2 = pad_image(image2, (0, w - h, 0, 0))
-            if use_masks:
-                mask1 = pad_image(mask1, (0, w - h, 0, 0))
-                mask2 = pad_image(mask2, (0, w - h, 0, 0))
+            pad_params = (0, w - h, 0, 0)
         else:
-            image1 = pad_image(image1, (0, 0, 0, h - w))
-            image2 = pad_image(image2, (0, 0, 0, h - w))
-            if use_masks:
-                mask1 = pad_image(mask1, (0, 0, 0, h - w))
-                mask2 = pad_image(mask2, (0, 0, 0, h - w))
+            pad_params = (0, 0, 0, h - w)
+        image1 = pad_image(image1, pad_params)
+        image2 = pad_image(image2, pad_params)
+        if config.use_masks:
+            mask1 = pad_image(mask1, pad_params)
+            mask2 = pad_image(mask2, pad_params)
 
     data1 = {'image': image1}
-    if use_masks:
+    if config.use_masks:
         data1['mask'] = mask1
     data1 = resizer(*data1)
     image1 = data1['image']
-    if use_masks:
+    if config.use_masks:
         mask1 = data1['mask']
 
     data2 = {'image': image2}
-    if use_masks:
+    if config.use_masks:
         data2['mask'] = mask2
     data2 = resizer(*data2)
     image2 = data2['image']
-    if use_masks:
+    if config.use_masks:
         mask2 = data2['mask']
 
     image1 = to_tensor(image1).float()
     image2 = to_tensor(image2).float()
 
-    if use_masks:
-        image1 = torch.cat([image1, torch.Tensor(mask1).float()[None]], 0)
-        image2 = torch.cat([image2, torch.Tensor(mask2).float()[None]], 0)
+    if config.use_masks:
+        if config.multiply_mask:
+            image1 = image1 * torch.Tensor(mask1).float()[None]
+            image2 = image2 * torch.Tensor(mask2).float()[None]
+        else:
+            image1 = torch.cat([image1, torch.Tensor(mask1).float()[None]], 0)
+            image2 = torch.cat([image2, torch.Tensor(mask2).float()[None]], 0)
     return image1, image2
 
 
@@ -128,7 +139,7 @@ def show(moving, fixed, reg):
     reg = reg[0] * 255
     im1 = np.zeros((256, 256, 3), dtype=np.uint8)
     im2 = np.zeros_like(im1)
-    im1[:,:,0] = np.uint8(fix)
+    im1[:, :, 0] = np.uint8(fix)
     im2[:, :, 0] = np.uint8(fix)
     im1[:, :, 1] = np.uint8(mov)
     im2[:, :, 1] = np.uint8(reg)
@@ -138,11 +149,12 @@ def show(moving, fixed, reg):
     input()
 
 
-def predict(model_path, image_path, im_size, save_path):
+def predict(config: InferenceConfig):
 
-    model_dict = torch.load(model_path)
+    model_dict = torch.load(config.model_path)
     if 'model' not in model_dict:
-        model = DefRegNet(1, im_size[0])
+        model = DefRegNet(2, image_size=config.im_size[1],
+                          device=config.device)
     else:
         model = model_dict['model']
     model.load_state_dict(model_dict['model_state_dict'])
@@ -152,48 +164,49 @@ def predict(model_path, image_path, im_size, save_path):
 
     print("Model loaded successfully!")
 
-    filenames = glob(image_path + '*eq*.tif')
-
-    for file in filenames:
-        defs = np.zeros(im_size + (2, ))
+    for iterator_file, file in enumerate(config.image_sequences):
+        defs = np.zeros(config.im_size[1:] + (2, ))
         seq = io.imread(file)
+        if config.use_masks:
+            assert config.mask_sequences is not None
+            mask_seq = io.imread(config.mask_sequences[iterator_file])
+
         first = True
         new_seq = []
-        fixed = preprocess_im(seq[0], im_size)
         for i in tqdm(range(1, len(seq))):
-            moving = preprocess_im(seq[i], im_size)
-            if use_gpu:
-                fixed = fixed.cuda()
-                moving = moving.cuda()
-            registered, deformations = voxelmorph(moving, fixed)
-            # print(registered.shape, deformations.shape)
-            registered = registered.detach().cpu().numpy()
-            fixed1 = fixed.detach().cpu().numpy()
-            deformations = deformations.detach().cpu().numpy()
-            # show(moving.detach().cpu().numpy(), fixed, registered)
+            if config.use_masks:
+                fixed, moving = preprocess_image_pair(seq[i - 1], seq[i], config,
+                                                      mask_seq[i-1], mask_seq[i])
+            else:
+                fixed, moving = preprocess_image_pair(seq[i-1], seq[i], config)
+
+            fixed = fixed.to(config.device)
+            moving = moving.to(config.device)
+
+            model_output = model(moving, fixed)
+
+            registered = model_output['batch_registered'].detach().cpu().numpy()
+            fixed = fixed.detach().cpu().numpy()
+            deformations =  model_output['batch_deformation'].detach().cpu().numpy()
+
             if first:
-                new_seq = np.concatenate([fixed1[0], registered.squeeze(1)], axis=0)
+                new_seq = np.concatenate([fixed[0], registered.squeeze(1)], axis=0)
                 first = False
             else:
                 new_seq = np.concatenate([new_seq, registered.squeeze(1)], axis=0)
-            # del fixed
-            del moving
-            # fixed = torch.Tensor(registered)
             defs = np.concatenate([defs, (deformations).transpose((0, 2, 3, 1))], axis=0)
-        save(seq, defs, save_path, file.split('/')[-1])
-        save256(new_seq, save_path + '/256/', file.split('/')[-1])
 
-            # # print(registered_image.max(), registered_image.min())
-            # save_images(batch_fixed, registered_images, deformations, imsizes, chunk, save_path)
+        save(seq, defs, config.save_path, file.split('/')[-1])
+        save256(new_seq, config.save_path + '/256/', file.split('/')[-1])
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("config_file", type=str)
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
-    # predict('/data/sim/DefReg/snapshots/ssim1/vm_1000',
-    #         '/data/sim/Notebooks/VM/data/', (1, 256, 256),
-    #         1, '/data/sim/Notebooks/VM/data/registered/result/ssim1/')
-    predict('./snapshots/ssim1/vm_840', '/data/sim/Notebooks/VM/data/viz/fwd/init*', (1, 256, 256),
-            1, '/data/sim/Notebooks/VM/data/viz/fwd/check/proposed/')
-
-    # predict('/data/sim/Notebooks/VM/snapshots/saved_models_def0.3/vm_180',
-    #         '/data/sim/Notebooks/VM/data/', (1, 128, 128),
-    #         1, '/data/sim/Notebooks/VM/data/registered/result/saved_models_def0.3/')
+    args = parse_args()
+    config = cast(InferenceConfig, load_yaml(InferenceConfig, args.config_file))
+    predict(config)
