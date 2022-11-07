@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument('--proposed_pickle_path', type=str,
                         help='path to calculated errors for proposed method registered sequence')
     parser.add_argument('--sequence_path', type=str, default='fwd',
-                        help='path, where tif image sequneces are stored')
+                        help='whole sequence path or path, where tif image sequneces are stored')
     parser.add_argument('--seq_name_pattern', type=str, default='Seq',
                         help='path, where tif image sequneces are stored')
     parser.add_argument('--save_graphics_path', type=str,
@@ -27,7 +27,12 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    sequences = glob(args.sequence_path + '/*.tif')
+    
+    if args.sequence_path[-3:] == 'tif':
+        sequences = [args.sequence_path]
+    else:
+        sequences = glob(args.sequence_path + '/*.tif')
+        
     for seq_name in filter(lambda name: name.find(args.seq_name_pattern) != -1, sequences):
         print(seq_name)
         with open(args.baseline_pickle_path + seq_name.split('/')[-1].split('.')[0], 'rb') as rd_f:

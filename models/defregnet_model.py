@@ -44,7 +44,19 @@ class DefRegNet(nn.Module):
         self.localization = self.localization.to(device)
         self.fc_loc = self.fc_loc.to(device)
         self.unet = self.unet.to(device)
-        self.spatial_transform = self.spatial_transform.to(device)
+        # self.spatial_transform = self.spatial_transform.to(device)
+        self.spatial_transform.device = device
+
+        
+    @property
+    def device(self):
+        return next(self.parameters()).device
+    
+    def to(self, device):
+        self.localization = self.localization.to(device)
+        self.fc_loc = self.fc_loc.to(device)
+        self.unet = self.unet.to(device)
+        self.spatial_transform.device = device
 
     def stn(self, x, y):
         """Spatial trasformer network."""

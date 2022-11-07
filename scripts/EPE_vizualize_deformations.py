@@ -15,7 +15,7 @@ def parse_args():
     parser.add_argument('--prefix', type=str, default='fwd',
                         help='prefix of deformation type')
     parser.add_argument('--sequence_path', type=str, default='fwd',
-                        help='path, where tif image sequneces are stored')
+                        help='whole sequence path or path, where tif image sequneces are stored')
     parser.add_argument('--seq_name_pattern', type=str, default='Seq',
                         help='path, where tif image sequneces are stored')
     parser.add_argument('--prediction_path', type=str,
@@ -36,7 +36,10 @@ if __name__ == "__main__":
     if args.draw_points:
         os.makedirs(args.save_drawing_path, exist_ok=True)
 
-    sequences = glob(args.sequence_path + '/*.tif')
+    if args.sequence_path[-3:] == 'tif':
+        sequences = [args.sequence_path]
+    else:
+        sequences = glob(args.sequence_path + '/*.tif')
     for seq_name in filter(lambda name: name.find(args.seq_name_pattern) != -1, sequences):
         print(seq_name)
         images = io.imread(seq_name).astype(np.float32)

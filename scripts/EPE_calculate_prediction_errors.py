@@ -8,16 +8,17 @@ import argparse
 
 from utils.ffRemap import dots_remap_bcw, ff_1_to_k
 from utils.points_error_calculation import frechetDist
-
+#TODO ADD THETAS
 
 def parse_args():
     parser = argparse.ArgumentParser(description='EPE script for drawing')
     parser.add_argument('--prefix', type=str, default='fwd',
                         help='prefix of deformation type')
     parser.add_argument('--sequence_path', type=str, default='fwd',
-                        help='path, where tif image sequneces are stored')
+                        help='whole sequence path or path, where tif image sequneces are stored')
     parser.add_argument('--seq_name_pattern', type=str, default='Seq',
                         help='path, where tif image sequneces are stored')
+    parser.add_argument('--prediction_path', type=str, help='predicted by model deformations')
     parser.add_argument('--save_pickle_path', type=str,
                         help='path to save calculated errors')
     args = parser.parse_args()
@@ -26,7 +27,11 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    sequences = glob(args.sequence_path + '/*.tif')
+    
+    if args.sequence_path[-3:] == 'tif':
+        sequences = [args.sequence_path]
+    else:
+        sequences = glob(args.sequence_path + '/*.tif')
     for seq_name in filter(lambda name: name.find(args.seq_name_pattern) != -1, sequences):
         print(seq_name)
         images = io.imread(seq_name).astype(np.float32)

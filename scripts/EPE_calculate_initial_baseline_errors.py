@@ -5,13 +5,19 @@ from skimage import io
 from glob import glob
 import pickle
 import sys
+import os
 
 from utils.ffRemap import dots_remap_bcw, ff_1_to_k
 from utils.points_error_calculation import frechetDist
 
 if __name__ == "__main__":
     prefix = 'fwd'
-    sequences = glob(sys.argv[1] + '/*.tif')
+    if sys.argv[1][-3:] == 'tif':
+        sequences = [sys.argv[1]]
+    else:
+        sequences = glob(sys.argv[1] + '/*.tif')
+        
+    os.makedirs(sys.argv[2], exist_ok=True)
     # going through sequences
     for seq_name in filter(lambda name: name.find('Seq') != -1, sequences):
         print(seq_name)
@@ -22,7 +28,8 @@ if __name__ == "__main__":
         poi = spio.loadmat(point_name)
 
         # load deformations from base elastic method
-        subf = ('/').join(seq_name.split('/')[:-1]) + '/deformations/numpy/'
+        subf = ('/').join(seq_name.split('/')[:-2]) + '/elastic_deformations/numpy/'
+        print(subf)
         baseline_def_name = subf + seq_name.split('/')[-1].split('.tif')[0] + f'_{prefix}.npy'
         base_deformation = np.load(baseline_def_name)
 
