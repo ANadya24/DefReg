@@ -8,7 +8,9 @@ import argparse
 
 from utils.ffRemap import dots_remap_bcw, ff_1_to_k
 from utils.points_error_calculation import frechetDist
-#TODO ADD THETAS
+
+
+# TODO ADD THETAS
 
 def parse_args():
     parser = argparse.ArgumentParser(description='EPE script for drawing')
@@ -19,6 +21,8 @@ def parse_args():
     parser.add_argument('--seq_name_pattern', type=str, default='Seq',
                         help='path, where tif image sequneces are stored')
     parser.add_argument('--prediction_path', type=str, help='predicted by model deformations')
+    parser.add_argument('--use_thetas', type=int, default=1, help='if positive than use affine matrix '
+                                                                  'transform before deformation application')
     parser.add_argument('--save_pickle_path', type=str,
                         help='path to save calculated errors')
     args = parser.parse_args()
@@ -27,7 +31,7 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    
+
     if args.sequence_path[-3:] == 'tif':
         sequences = [args.sequence_path]
     else:
@@ -45,6 +49,10 @@ if __name__ == "__main__":
         def_name = args.prediction_path + '/deformations/' + \
                    seq_name.split('/')[-1].split('.tif')[0] + '.npy'
         proposed_deformations = np.load(def_name)
+        if args.use_thetas:
+            theta_name = args.prediction_path + '/thetas/' + \
+                         seq_name.split('/')[-1].split('.tif')[0] + '.npy'
+            proposed_thetas = np.load(theta_name)
 
         bound = np.stack(poi['spotsB'][0].squeeze())
         inner = np.stack(poi['spotsI'][0].squeeze())
@@ -80,18 +88,50 @@ if __name__ == "__main__":
         b4 = np.zeros(len(images))
 
         proposed_init_def = None
+        if args.use_thetas:
+            proposed_init_theta = None
+
         for i in range(1, len(images)):
             bound_points = bound[i]
             inner_points = inner[i]
             line_points = lines[i]
 
             proposed_deformation = proposed_deformations[i]
+            if args.use_thetas:
+                proposed_theta = proposed_thetas[i]
             if i != 1:
                 proposed_deformation = ff_1_to_k(proposed_init_def, proposed_deformation)
+                if args.use_thetas:
+                    proposed_theta = np.concatenate([proposed_init_theta, np.array([[0, 0, 1]])], 0)
+                    proposed_theta = np.concatenate([proposed_theta,
+                                                     np.array([[0, 0, 1]])], 0) @ proposed_theta
+
+            if args.use_thetas:
+                cur_bound_points = proposed_theta @ np.concatenate((np.array(bound_points.copy()),
+                                                                    np.ones((len(bound_points), 1))),
+                                                                   axis=1).transpose((1, 0))
+                cur_bound_points = cur_bound_points.transpose((1, 0))[:, :2]
+
+                cur_inner_points = proposed_theta @ np.concatenate((np.array(inner_points.copy()),
+                                                                    np.ones((len(inner_points), 1))),
+                                                                   axis=1).transpose((1, 0))
+                cur_inner_points = cur_inner_points.transpose((1, 0))[:, :2]
+
+                cur_line_points = proposed_theta @ np.concatenate((np.array(line_points.copy()),
+                                                                   np.ones((len(line_points), 1))),
+                                                                  axis=1).transpose((1, 0))
+                cur_line_points = cur_line_points.transpose((1, 0))[:, :2]
+
+                proposed_init_theta = proposed_theta.copy()
+            else:
+                cur_bound_points = bound_points.copy()
+                cur_inner_points = inner_points.copy()
+                cur_line_points = line_points.copy()
+
             proposed_init_def = proposed_deformation.copy()
-            proposed_def_bound_points = dots_remap_bcw(bound_points.copy(), proposed_deformation.copy())
-            proposed_def_inner_points = dots_remap_bcw(inner_points.copy(), proposed_deformation.copy())
-            proposed_def_lines = dots_remap_bcw(line_points.copy(), proposed_deformation.copy())
+            proposed_def_bound_points = dots_remap_bcw(cur_bound_points, proposed_deformation.copy())
+            proposed_def_inner_points = dots_remap_bcw(cur_inner_points, proposed_deformation.copy())
+            proposed_def_lines = dots_remap_bcw(cur_line_points, proposed_deformation.copy())
 
             bound_err[i] = ((((proposed_def_bound_points - fbound.squeeze()) ** 2).sum(axis=1)
                              ) ** 0.5).sum(axis=0) / float(fbound.shape[1])
