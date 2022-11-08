@@ -97,7 +97,6 @@ if __name__ == "__main__":
         base_line_err = np.zeros(len(images))
 
         for i in range(1, len(images)):
-            x = images[i]
             b_p = bound[i]
             in_p = inner[i]
             line_p = lines[i]
