@@ -24,7 +24,6 @@ def parse_args():
                         help='path to predicted deformations and sequences')
     parser.add_argument('--save_drawing_path', type=str,
                         help='path where to save drawings')
-    parser.add_argument('--draw_points', action=argparse.BooleanOptionalAction)
 
     args = parser.parse_args()
     return args
@@ -33,8 +32,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    if args.draw_points:
-        os.makedirs(args.save_drawing_path, exist_ok=True)
+    os.makedirs(args.save_drawing_path, exist_ok=True)
 
     if args.sequence_path[-3:] == 'tif':
         sequences = [args.sequence_path]
@@ -55,7 +53,8 @@ if __name__ == "__main__":
         proposed_deformations = np.load(def_name)
 
         # load deformations from base elastic method
-        baseline_def_name = '/'.join(seq_name.split('/')[:-1]) + f'/deformations/numpy/' \
+        subf = ('/').join(seq_name.split('/')[:-2]) + '/elastic_deformations/numpy/'
+        baseline_def_name = subf \
                             + seq_name.split('/')[-1].split('.tif')[0] + f'_{args.prefix}.npy'
         base_deformations = np.load(baseline_def_name)
 
@@ -77,31 +76,24 @@ if __name__ == "__main__":
 
         lines = np.concatenate((line1, line2, line3, line4), axis=1)
 
-        if args.draw_points:
-            seq_name_elast = args.base_prediction_path + seq_name.split('/')[-1]
-            seq_name_prop = args.prediction_path + seq_name.split('/')[-1]
-            # initial unregistered sequence
-            seq_init = io.imread(seq_name)
-            seq_init = np.stack([seq_init, seq_init, seq_init], -1)
-            seq_init[0] = draw(seq_init[0], (bound[0], inner[0], lines[0]),
-                               (len1, len2, len3, len4), (255, 255, 255))
+        seq_name_elast = args.base_prediction_path + seq_name.split('/')[-1]
+        seq_name_prop = args.prediction_path + seq_name.split('/')[-1]
+        # initial unregistered sequence
+        seq_init = io.imread(seq_name)
+        seq_init = np.stack([seq_init, seq_init, seq_init], -1)
+        seq_init[0] = draw(seq_init[0], (bound[0], inner[0], lines[0]),
+                           (len1, len2, len3, len4), (255, 255, 255))
 
-            # registered sequence by proposed method
-            proposed_method_seq = io.imread(seq_name_prop)
-            proposed_method_seq = np.stack([proposed_method_seq, proposed_method_seq, proposed_method_seq], -1)
-            proposed_seq = [draw(proposed_method_seq[0], (bound[0], inner[0], lines[0]),
-                                 (len1, len2, len3, len4), (255, 0, 0))]
+        # registered sequence by proposed method
+        proposed_method_seq = io.imread(seq_name_prop)
+        proposed_method_seq = np.stack([proposed_method_seq, proposed_method_seq, proposed_method_seq], -1)
+        proposed_seq = [draw(proposed_method_seq[0], (bound[0], inner[0], lines[0]),
+                             (len1, len2, len3, len4), (255, 0, 0))]
 
-            # registered sequence by elastic baseline method
-            base_method_seq = io.imread(seq_name_elast)
-            base_method_seq = np.stack([base_method_seq, base_method_seq, base_method_seq], -1)
-            base_seq = [draw(base_method_seq[0], (bound[0], inner[0], lines[0]), (len1, len2, len3, len4), (0, 0, 255))]
-        else:
-            seq_init = None
-            proposed_method_seq = None
-            proposed_seq = None
-            base_method_seq = None
-            base_seq = None
+        # registered sequence by elastic baseline method
+        base_method_seq = io.imread(seq_name_elast)
+        base_method_seq = np.stack([base_method_seq, base_method_seq, base_method_seq], -1)
+        base_seq = [draw(base_method_seq[0], (bound[0], inner[0], lines[0]), (len1, len2, len3, len4), (0, 0, 255))]
 
         in_sh = images.shape
 
@@ -131,41 +123,40 @@ if __name__ == "__main__":
             base_def_inner_points = dots_remap_bcw(inner_points.copy(), base_deformation.copy())
             base_def_lines = dots_remap_bcw(line_points.copy(), base_deformation.copy())
 
-            if args.draw_points:
-                assert proposed_method_seq is not None
-                assert proposed_seq is not None
-                assert seq_init is not None
-                assert base_method_seq is not None
-                assert base_seq is not None
+            # assert proposed_method_seq is not None
+            # assert proposed_seq is not None
+            # assert seq_init is not None
+            # assert base_method_seq is not None
+            # assert base_seq is not None
 
-                # draw deformed points on our predicted sequence
-                seq_draw = draw(proposed_method_seq[i],
-                                (proposed_def_bound_points,
-                                 proposed_def_inner_points, proposed_def_lines),
-                                (len1, len2, len3, len4), (255, 0, 0))
-                # draw initial points on our predicted sequence
-                seq_draw = draw(seq_draw, (bound[0], inner[0], lines[0]),
-                                (len1, len2, len3, len4), (0, 255, 255))
-                proposed_seq.append(seq_draw)
+            # draw deformed points on our predicted sequence
+            seq_draw = draw(proposed_method_seq[i],
+                            (proposed_def_bound_points,
+                             proposed_def_inner_points, proposed_def_lines),
+                            (len1, len2, len3, len4), (255, 0, 0))
+            # draw initial points on our predicted sequence
+            seq_draw = draw(seq_draw, (bound[0], inner[0], lines[0]),
+                            (len1, len2, len3, len4), (0, 255, 255))
+            proposed_seq.append(seq_draw)
 
-                # draw deformed by base method points on predicted by base method sequence
-                seq_draw = draw(base_method_seq[i],
-                                (base_def_bound_points,
-                                 base_def_inner_points, base_def_lines),
-                                (len1, len2, len3, len4), (0, 0, 255))
-                # draw initial points on predicted by base method sequence
-                seq_draw = draw(seq_draw, (bound[0], inner[0], lines[0]),
-                                (len1, len2, len3, len4), (0, 255, 255))
-                base_seq.append(seq_draw)
+            # draw deformed by base method points on predicted by base method sequence
+            seq_draw = draw(base_method_seq[i],
+                            (base_def_bound_points,
+                             base_def_inner_points, base_def_lines),
+                            (len1, len2, len3, len4), (0, 0, 255))
+            # draw initial points on predicted by base method sequence
+            seq_draw = draw(seq_draw, (bound[0], inner[0], lines[0]),
+                            (len1, len2, len3, len4), (0, 255, 255))
+            base_seq.append(seq_draw)
 
-                # draw initial_points on initial sequence
-                seq_init[i] = draw(seq_init[i], (bound[i], inner[i], lines[i]), (len1, len2, len3, len4),
-                                   (255, 255, 255))
+            # draw initial_points on initial sequence
+            seq_init[i] = draw(seq_init[i], (bound[i], inner[i], lines[i]), (len1, len2, len3, len4),
+                               (255, 255, 255))
 
-        if args.draw_points:
-            io.imsave(args.save_drawing_path + f'/{args.prefix}/init_' + seq_name.split('/')[-1],
-                      seq_init)
-            io.imsave(args.save_drawing_path + f'/{args.prefix}/prop_' + seq_name.split('/')[-1],
-                      np.array(proposed_seq))
-            io.imsave(args.save_drawing_path + f'/{args.prefix}/elastic_' + seq_name.split('/')[-1],
-                      np.array(base_seq))
+        os.makedirs(args.save_drawing_path + f'/{args.prefix}', exist_ok=True)
+        io.imsave(args.save_drawing_path + f'/{args.prefix}/init_' + seq_name.split('/')[-1],
+                  seq_init)
+        io.imsave(args.save_drawing_path + f'/{args.prefix}/prop_' + seq_name.split('/')[-1],
+                  np.array(proposed_seq))
+        io.imsave(args.save_drawing_path + f'/{args.prefix}/elastic_' + seq_name.split('/')[-1],
+                  np.array(base_seq))
