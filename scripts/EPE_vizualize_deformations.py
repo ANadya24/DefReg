@@ -8,6 +8,7 @@ import os
 
 from utils.ffRemap import dots_remap_bcw, ff_1_to_k
 from utils.points_error_calculation import draw
+from utils.affine_matrix_conversion import cvt_ThetaToM
 
 
 def parse_args():
@@ -18,10 +19,16 @@ def parse_args():
                         help='whole sequence path or path, where tif image sequneces are stored')
     parser.add_argument('--seq_name_pattern', type=str, default='Seq',
                         help='path, where tif image sequneces are stored')
-    parser.add_argument('--prediction_path', type=str,
-                        help='path to predicted deformations and sequences')
-    parser.add_argument('--base_prediction_path', type=str,
-                        help='path to predicted deformations and sequences')
+    parser.add_argument('--predicted_deformation_path', type=str,
+                        help='path to predicted deformations')
+    parser.add_argument('--predicted_theta_path', type=str,
+                        help='path to predicted thetas')
+    parser.add_argument('--base_deformation_path', type=str,
+                        help='path to base deformations')
+    parser.add_argument('--predicted_sequence_path', type=str,
+                        help='path to predicted sequences')
+    parser.add_argument('--base_sequence_path', type=str,
+                        help='path to base sequences')
     parser.add_argument('--save_drawing_path', type=str,
                         help='path where to save drawings')
 
@@ -38,6 +45,7 @@ if __name__ == "__main__":
         sequences = [args.sequence_path]
     else:
         sequences = glob(args.sequence_path + '/*.tif')
+        
     for seq_name in filter(lambda name: name.find(args.seq_name_pattern) != -1, sequences):
         print(seq_name)
         images = io.imread(seq_name).astype(np.float32)
@@ -48,14 +56,19 @@ if __name__ == "__main__":
 
         # load deformations from proposed nn method
         # subf = ('/').join(seq_name.split('/')[:-1]) + f'/registered/result/{model_name}/deformations/'
-        def_name = args.prediction_path + '/deformations/' + \
+        def_name = args.predicted_deformation_path + \
                    seq_name.split('/')[-1].split('.tif')[0] + '.npy'
         proposed_deformations = np.load(def_name)
+        
+   
+        theta_name = args.predicted_theta_path + \
+                     seq_name.split('/')[-1].split('.tif')[0] + '.npy'
+        proposed_thetas = np.load(theta_name)
 
         # load deformations from base elastic method
-        subf = ('/').join(seq_name.split('/')[:-2]) + '/elastic_deformations/numpy/'
-        baseline_def_name = subf \
-                            + seq_name.split('/')[-1].split('.tif')[0] + f'_{args.prefix}.npy'
+        
+        baseline_def_name = args.base_deformation_path + \
+                            seq_name.split('/')[-1].split('.tif')[0] + f'_{args.prefix}.npy'
         base_deformations = np.load(baseline_def_name)
 
         bound = np.stack(poi['spotsB'][0].squeeze())
@@ -76,13 +89,13 @@ if __name__ == "__main__":
 
         lines = np.concatenate((line1, line2, line3, line4), axis=1)
 
-        seq_name_elast = args.base_prediction_path + seq_name.split('/')[-1]
-        seq_name_prop = args.prediction_path + seq_name.split('/')[-1]
-        # initial unregistered sequence
-        seq_init = io.imread(seq_name)
-        seq_init = np.stack([seq_init, seq_init, seq_init], -1)
-        seq_init[0] = draw(seq_init[0], (bound[0], inner[0], lines[0]),
-                           (len1, len2, len3, len4), (255, 255, 255))
+        seq_name_elast = args.base_sequence_path + seq_name.split('/')[-1]
+        seq_name_prop = args.predicted_sequence_path + seq_name.split('/')[-1]
+        # # initial unregistered sequence
+        # seq_init = io.imread(seq_name)
+        # seq_init = np.stack([seq_init, seq_init, seq_init], -1)
+        # seq_init[0] = draw(seq_init[0], (bound[0], inner[0], lines[0]),
+        #                    (len1, len2, len3, len4), (255, 255, 255))
 
         # registered sequence by proposed method
         proposed_method_seq = io.imread(seq_name_prop)
@@ -99,26 +112,48 @@ if __name__ == "__main__":
 
         base_init_def = None
         proposed_init_def = None
+        proposed_init_theta = None
+        
         for i in range(1, len(images)):
-            bound_points = bound[i].copy()
-            inner_points = inner[i].copy()
-            line_points = lines[i].copy()
+            bound_points = bound[i]
+            inner_points = inner[i]
+            line_points = lines[i]
 
-            proposed_deformation = proposed_deformations[i].copy()
-            base_deformation = base_deformations[i].copy()
+            proposed_deformation = proposed_deformations[i]
+            proposed_theta = cvt_ThetaToM(proposed_thetas[i], in_sh[2], in_sh[1], return_inv=False)
+    
+            base_deformation = base_deformations[i]
 
             if i != 1:
                 base_deformation = ff_1_to_k(base_init_def, base_deformation)
-                proposed_deformation = ff_1_to_k(proposed_init_def, proposed_deformation)
+                # proposed_deformation = ff_1_to_k(proposed_init_def, proposed_deformation)
+                
             base_init_def = base_deformation.copy()
             proposed_init_def = proposed_deformation.copy()
 
             print(proposed_deformation.min(), proposed_deformation.max(),
                   base_deformation.min(), base_deformation.max())
 
-            proposed_def_bound_points = dots_remap_bcw(bound_points.copy(), proposed_deformation.copy())
-            proposed_def_inner_points = dots_remap_bcw(inner_points.copy(), proposed_deformation.copy())
-            proposed_def_lines = dots_remap_bcw(line_points.copy(), proposed_deformation.copy())
+            proposed_def_bound_points = bound_points.copy()
+            proposed_def_bound_points = proposed_theta @ np.concatenate((proposed_def_bound_points,
+                                                                    np.ones((len(proposed_def_bound_points), 1))),
+                                                                   axis=1).transpose((1, 0))
+            proposed_def_bound_points = proposed_def_bound_points.transpose((1, 0))[:, :2]
+            proposed_def_bound_points = dots_remap_bcw(proposed_def_bound_points, proposed_deformation.copy())
+            
+            proposed_def_inner_points = inner_points.copy()
+            proposed_def_inner_points = proposed_theta @ np.concatenate((proposed_def_inner_points,
+                                                                    np.ones((len(proposed_def_inner_points), 1))),
+                                                                   axis=1).transpose((1, 0))
+            proposed_def_inner_points = proposed_def_inner_points.transpose((1, 0))[:, :2]
+            proposed_def_inner_points = dots_remap_bcw(proposed_def_inner_points, proposed_deformation.copy())
+            
+            proposed_def_lines = line_points.copy()
+            proposed_def_lines = proposed_theta @ np.concatenate((proposed_def_lines,
+                                                                    np.ones((len(proposed_def_lines), 1))), axis=1).transpose((1, 0))
+            proposed_def_lines = proposed_def_lines.transpose((1, 0))[:, :2]
+            proposed_def_lines = dots_remap_bcw(proposed_def_lines, proposed_deformation.copy())
+            
             base_def_bound_points = dots_remap_bcw(bound_points.copy(), base_deformation.copy())
             base_def_inner_points = dots_remap_bcw(inner_points.copy(), base_deformation.copy())
             base_def_lines = dots_remap_bcw(line_points.copy(), base_deformation.copy())
@@ -149,13 +184,13 @@ if __name__ == "__main__":
                             (len1, len2, len3, len4), (0, 255, 255))
             base_seq.append(seq_draw)
 
-            # draw initial_points on initial sequence
-            seq_init[i] = draw(seq_init[i], (bound[i], inner[i], lines[i]), (len1, len2, len3, len4),
-                               (255, 255, 255))
+            # # draw initial_points on initial sequence
+            # seq_init[i] = draw(seq_init[i], (bound[i], inner[i], lines[i]), (len1, len2, len3, len4),
+            #                    (255, 255, 255))
 
         os.makedirs(args.save_drawing_path + f'/{args.prefix}', exist_ok=True)
-        io.imsave(args.save_drawing_path + f'/{args.prefix}/init_' + seq_name.split('/')[-1],
-                  seq_init)
+        # io.imsave(args.save_drawing_path + f'/{args.prefix}/init_' + seq_name.split('/')[-1],
+        #           seq_init)
         io.imsave(args.save_drawing_path + f'/{args.prefix}/prop_' + seq_name.split('/')[-1],
                   np.array(proposed_seq))
         io.imsave(args.save_drawing_path + f'/{args.prefix}/elastic_' + seq_name.split('/')[-1],

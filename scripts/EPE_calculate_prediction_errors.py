@@ -8,9 +8,8 @@ import argparse
 
 from utils.ffRemap import dots_remap_bcw, ff_1_to_k
 from utils.points_error_calculation import frechetDist
+from utils.affine_matrix_conversion import cvt_ThetaToM
 
-
-# TODO ADD THETAS
 
 def parse_args():
     parser = argparse.ArgumentParser(description='EPE script for drawing')
@@ -87,9 +86,9 @@ if __name__ == "__main__":
         b3 = np.zeros(len(images))
         b4 = np.zeros(len(images))
 
-        proposed_init_def = None
-        if args.use_thetas:
-            proposed_init_theta = None
+        # proposed_init_def = None
+        # if args.use_thetas:
+        #     proposed_init_theta = None
 
         for i in range(1, len(images)):
             bound_points = bound[i]
@@ -99,12 +98,12 @@ if __name__ == "__main__":
             proposed_deformation = proposed_deformations[i]
             if args.use_thetas:
                 proposed_theta = proposed_thetas[i]
-            if i != 1:
-                proposed_deformation = ff_1_to_k(proposed_init_def, proposed_deformation)
-                if args.use_thetas:
-                    proposed_theta = np.concatenate([proposed_init_theta, np.array([[0, 0, 1]])], 0)
-                    proposed_theta = np.concatenate([proposed_theta,
-                                                     np.array([[0, 0, 1]])], 0) @ proposed_theta
+                proposed_theta = cvt_ThetaToM(proposed_theta, images.shape[2], images.shape[1])
+            # if i != 1:
+            #     proposed_deformation = ff_1_to_k(proposed_init_def, proposed_deformation)
+            #     if args.use_thetas:
+            #         proposed_theta = np.concatenate([proposed_theta, np.array([[0, 0, 1]])], 0)
+            #         proposed_theta = proposed_init_theta @ proposed_theta
 
             if args.use_thetas:
                 cur_bound_points = proposed_theta @ np.concatenate((np.array(bound_points.copy()),
@@ -122,13 +121,13 @@ if __name__ == "__main__":
                                                                   axis=1).transpose((1, 0))
                 cur_line_points = cur_line_points.transpose((1, 0))[:, :2]
 
-                proposed_init_theta = proposed_theta.copy()
+                # proposed_init_theta = proposed_theta.copy()
             else:
                 cur_bound_points = bound_points.copy()
                 cur_inner_points = inner_points.copy()
                 cur_line_points = line_points.copy()
 
-            proposed_init_def = proposed_deformation.copy()
+            # proposed_init_def = proposed_deformation.copy()
             proposed_def_bound_points = dots_remap_bcw(cur_bound_points, proposed_deformation.copy())
             proposed_def_inner_points = dots_remap_bcw(cur_inner_points, proposed_deformation.copy())
             proposed_def_lines = dots_remap_bcw(cur_line_points, proposed_deformation.copy())
