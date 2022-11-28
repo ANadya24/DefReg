@@ -17,15 +17,21 @@ def validate_images(images1, images2, images3, val_dir='val_images/', epoch=0, t
         im1 = im1[0].astype('uint8')
         im2 = im2[0].astype('uint8')
         im3 = im3[0].astype('uint8')
+        # if train:
+        #     io.imsave(val_dir + f'train_epoch{epoch}_{i}_1.jpg', im1)
+        #     io.imsave(val_dir + f'train_epoch{epoch}_{i}_2.jpg', im2)
+        #     io.imsave(val_dir + f'train_epoch{epoch}_{i}_3.jpg', im3)
+        # else:
+        #     io.imsave(val_dir + f'val_epoch{epoch}_{i}_1.jpg', im1)
+        #     io.imsave(val_dir + f'val_epoch{epoch}_{i}_2.jpg', im2)
+        #     io.imsave(val_dir + f'val_epoch{epoch}_{i}_3.jpg', im3)
+        col1 = np.stack([im1, im2, np.zeros_like(im2)], -1)
+        col2 = np.stack([im1, im3, np.zeros_like(im3)], -1)
+        col = np.concatenate([col1, col2], 1)
         if train:
-            io.imsave(val_dir + f'train_epoch{epoch}_{i}_1.jpg', im1)
-            io.imsave(val_dir + f'train_epoch{epoch}_{i}_2.jpg', im2)
-            io.imsave(val_dir + f'train_epoch{epoch}_{i}_3.jpg', im3)
+            io.imsave(val_dir + f'train_epoch{epoch}_{i}.jpg', col)
         else:
-            io.imsave(val_dir + f'val_epoch{epoch}_{i}_1.jpg', im1)
-            io.imsave(val_dir + f'val_epoch{epoch}_{i}_2.jpg', im2)
-            io.imsave(val_dir + f'val_epoch{epoch}_{i}_3.jpg', im3)
-
+            io.imsave(val_dir + f'val_epoch{epoch}_{i}.jpg', col)
         i += 1
 
 
