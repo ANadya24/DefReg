@@ -9,6 +9,7 @@ from torch.utils import data
 from torch.utils.tensorboard import SummaryWriter
 
 from utils.val_images import validate_images, validate_deformations
+from utils.affine_matrix_conversion import cvt_ThetaToM
 from utils.points_error_calculation import frechetDist
 from utils.ffRemap import dots_remap_bcw
 
@@ -108,6 +109,54 @@ def apply_deformation_2points(batch_points: torch.Tensor,
     return batch_points
 
 
+def apply_deformation_theta_2points(batch_points: torch.Tensor,
+                              batch_deformation: torch.Tensor,
+                              batch_theta: torch.Tensor,
+                              num_points_interpolation=4):
+    # if isinstance(batch_points, np.ndarray):
+    #     batch_points = torch.Tensor(batch_points).to(device)
+    #
+    # if isinstance(batch_deformation, np.ndarray):
+    #     batch_deformation = torch.Tensor(batch_deformation).to(device)
+    b, ch, h, w = batch_deformation.shape
+
+    for i, deformation in enumerate(batch_deformation):
+        theta = batch_theta[i]
+        theta = cvt_ThetaToM(theta, w, h)
+        points = batch_points[i]
+        points = theta @ torch.cat((torch.tensor(points), torch.ones((len(points), 1))),
+                                   dim=1).permute(1, 0)
+        batch_points[i] = points.permute(1, 0)[:, :2]
+
+        y, x = torch.meshgrid(torch.arange(h),
+                              torch.arange(w))
+        y = y.to(deformation.device)
+        x = x.to(deformation.device)
+
+        x = x + deformation[0]
+        y = y + deformation[1]
+
+        deformation *= -1.
+
+        distance_map = ((x[..., None] - batch_points[i, None, None, :, 0]) ** 2 +
+                        (y[..., None] - batch_points[i, None, None, :, 1]) ** 2) ** 0.5
+        distance_map = distance_map.reshape(-1, len(batch_points[0]))
+        idxs = torch.topk(distance_map, dim=0, k=num_points_interpolation,
+                          largest=False, sorted=False)[1]
+        fx = torch.take(deformation[0], idxs.reshape(-1)).reshape(-1, len(batch_points[0])).sum(dim=0)
+        fx /= num_points_interpolation
+
+        fy = torch.take(deformation[1], idxs.reshape(-1)).reshape(-1, len(batch_points[0])).sum(dim=0)
+        fy /= num_points_interpolation
+
+        batch_points[i, :, 0] += fx
+        batch_points[i, :, 1] += fy
+
+    batch_points[..., 0] = torch.clip(batch_points[..., 0], 0, w)
+    batch_points[..., 1] = torch.clip(batch_points[..., 1], 0, h)
+    return batch_points
+
+
 def calculate_point_metrics(batch_points1: torch.Tensor,
                             batch_points2: torch.Tensor,
                             batch_points_len: torch.Tensor):
@@ -183,9 +232,10 @@ def validate_model(input_batch: torch.Tensor,
     if return_point_metrics:
         points_fixed, points_moving, points_len = input_batch[2:]
         
-        registered_points = apply_deformation_2points(
+        registered_points = apply_deformation_theta_2points(
             points_moving.to(device),
-            output_dict['batch_deformation'])
+            output_dict['batch_deformation'],
+            output_dict['theta'])
         metrics = calculate_point_metrics(points_fixed, 
                                           registered_points.to(points_fixed.device), 
                                           points_len)
