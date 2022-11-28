@@ -53,10 +53,12 @@ class DefRegNet(nn.Module):
         return next(self.parameters()).device
     
     def to(self, device):
+        super().to(device)
         self.localization = self.localization.to(device)
         self.fc_loc = self.fc_loc.to(device)
         self.unet = self.unet.to(device)
         self.spatial_transform.device = device
+        return self
 
     def stn(self, x, y):
         """Spatial trasformer network."""

@@ -80,6 +80,7 @@ class CustomCriterion(nn.Module):
             except:
                 self.losses.append((getattr(torch.nn, loss.loss_name)(**loss.loss_parameters),
                                 loss.weight, loss.input_keys, loss.loss_name, loss.return_loss))
+ 
 
     def forward(self, input_dict):
         losses2return = {}
