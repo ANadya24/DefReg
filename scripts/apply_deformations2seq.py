@@ -20,6 +20,8 @@ def parse_args():
     parser.add_argument('--seq_name_pattern', type=str, default='Seq',
                         help='path, where tif image sequneces are stored')
     parser.add_argument('--prediction_path', type=str, help='predicted by model deformations')
+    parser.add_argument('--use_thetas', type=int, default=1, help='if positive than use affine matrix '
+                                                                  'transform before deformation application')
     parser.add_argument('--save_path', type=str,
                         help='path to save deformed sequences')
     args = parser.parse_args()
@@ -46,15 +48,20 @@ if __name__ == "__main__":
                 continue
         proposed_deformations = np.load(def_name)
 
-        theta_name = args.prediction_path + '/thetas/' + \
-                     seq_name.split('/')[-1].split('.tif')[0] + '.npy'
-        if not os.path.exists(theta_name):
-            theta_name = theta_name.replace('init_', '')
+        if args.use_thetas:
+            theta_name = args.prediction_path + '/thetas/' + \
+                         seq_name.split('/')[-1].split('.tif')[0] + '.npy'
             if not os.path.exists(theta_name):
-                continue
-        proposed_thetas = np.load(theta_name)
+                theta_name = theta_name.replace('init_', '')
+                if not os.path.exists(theta_name):
+                    continue
+            proposed_thetas = np.load(theta_name)
+        else:
+            proposed_thetas = None
         
-        save(images, proposed_thetas, proposed_deformations, args.save_path, seq_name.split('/')[-1].replace('init_', ''))
+        save(images, proposed_thetas, proposed_deformations,
+             args.save_path, seq_name.split('/')[-1].replace('init_', ''),
+             use_theta=bool(args.use_thetas))
 
         shutil.rmtree(args.save_path + '/deformations')
         shutil.rmtree(args.save_path + '/thetas')

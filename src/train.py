@@ -231,14 +231,21 @@ def validate_model(input_batch: torch.Tensor,
 
     if return_point_metrics:
         points_fixed, points_moving, points_len = input_batch[2:]
-        
-        registered_points = apply_deformation_theta_2points(
-            points_moving.to(device),
-            output_dict['batch_deformation'],
-            output_dict['theta'])
+        if model.use_theta:
+
+            registered_points = apply_deformation_theta_2points(
+                points_moving.to(device),
+                output_dict['batch_deformation'],
+                output_dict['theta'])
+        else:
+            registered_points = apply_deformation_2points(
+                points_moving.to(device),
+                output_dict['batch_deformation'])
+
         metrics = calculate_point_metrics(points_fixed, 
                                           registered_points.to(points_fixed.device), 
                                           points_len)
+
         metrics2 = calculate_point_metrics(points_fixed, points_moving, points_len)
         metrics['points_error_l2_prev'] = metrics2['points_error_l2']
         return losses, metrics

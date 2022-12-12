@@ -13,28 +13,34 @@ class DefRegNet(nn.Module):
     field and the affine matrix.
     """
 
-    def __init__(self, in_channels, image_size=128, device='cpu'):
+    def __init__(self, in_channels, image_size=128, device='cpu',
+                 use_theta: bool = True):
         super(DefRegNet, self).__init__()
 
         #################################
-        self.localization = nn.Sequential(
-            nn.Conv2d(in_channels, 6, kernel_size=(7, 7)),
-            nn.MaxPool2d(2, stride=2),
-            nn.ReLU(True),
-            nn.Conv2d(6, 10, kernel_size=(5, 5)),
-            nn.MaxPool2d(2, stride=2),
-            nn.ReLU(True)
-        )
-        out_image_size = int(image_size / 4) - 4
-        # Regressor for the 3 * 2 affine matrix
-        self.fc_loc = nn.Sequential(
-            nn.Linear(out_image_size * out_image_size * 10, 32),
-            nn.ReLU(True),
-            nn.Linear(32, 3 * 2)
-        )
+        self.use_theta = use_theta
+        if self.use_theta:
+            self.localization = nn.Sequential(
+                nn.Conv2d(in_channels, 6, kernel_size=(7, 7)),
+                nn.MaxPool2d(2, stride=2),
+                nn.ReLU(True),
+                nn.Conv2d(6, 10, kernel_size=(5, 5)),
+                nn.MaxPool2d(2, stride=2),
+                nn.ReLU(True)
+            )
+            out_image_size = int(image_size / 4) - 4
+            # Regressor for the 3 * 2 affine matrix
+            self.fc_loc = nn.Sequential(
+                nn.Linear(out_image_size * out_image_size * 10, 32),
+                nn.ReLU(True),
+                nn.Linear(32, 3 * 2)
+            )
 
-        self.fc_loc[2].weight.data.zero_()
-        self.fc_loc[2].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
+            self.fc_loc[2].weight.data.zero_()
+            self.fc_loc[2].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
+        else:
+            self.localization = None
+            self.fc_loc = None
         ####################################################################
 
         self.unet = UNet(in_channels, 2)
@@ -75,7 +81,10 @@ class DefRegNet(nn.Module):
         return y, theta
 
     def forward(self, batch_moving, batch_fixed):
-        batch_affine_moving, theta = self.stn(batch_fixed, batch_moving)
+        if self.use_theta:
+            batch_affine_moving, theta = self.stn(batch_fixed, batch_moving)
+        else:
+            batch_affine_moving = batch_moving
         # diff = batch_fixed - batch_moving
         x = torch.cat([batch_affine_moving, batch_fixed], dim=1)
         batch_deformation = self.unet(x)
@@ -86,8 +95,11 @@ class DefRegNet(nn.Module):
 
         output = {'batch_registered': batch_registered,
                   'batch_deformation': batch_deformation,
-                  'theta': theta,
-                  'affine_trf_registered': batch_affine_moving}
+                 }
+
+        if self.use_theta:
+            output.update({'theta': theta, 'affine_trf_registered': batch_affine_moving})
+
         nan_flag = False
         items = list(output.keys())
         for item in items:

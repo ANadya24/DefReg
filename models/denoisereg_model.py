@@ -83,13 +83,15 @@ class DenoiseDefRegNet(nn.Module):
     DenoiseReg + DefRegNet
     """
 
-    def __init__(self, in_channels, image_size=128, device='cpu'):
+    def __init__(self, in_channels, image_size=128, device='cpu',
+                 use_theta: bool = True):
         super(DenoiseDefRegNet, self).__init__()
 
         self.denoise_reg_net = DenoiseRegNet(in_channels=in_channels)
         self.def_reg_net = DefRegNet(in_channels=in_channels, 
                                      image_size=image_size,
-                                     device=device)
+                                     device=device,
+                                     use_theta=use_theta)
 
     def forward(self, fixed_image, moving_image):
         output = self.denoise_reg_net(fixed_image, moving_image)

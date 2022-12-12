@@ -37,6 +37,7 @@ model:
   image_size: 128
   in_channels: 1
   model_name: DefRegNet
+  use_theta: true
 model_name: model
 model_path: ''
 num_epochs: 100

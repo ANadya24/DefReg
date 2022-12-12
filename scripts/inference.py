@@ -88,7 +88,7 @@ def save256(new_seq, path, name):
     io.imsave(path + name, new_seq)
 
 
-def apply_theta_and_deformation2image(image, theta, deformation):
+def apply_theta_and_deformation2image(image, theta, deformation, use_theta=True):
     SP = SpatialTransformation()
 
     if image.shape[-1] == 3:
@@ -113,19 +113,19 @@ def apply_theta_and_deformation2image(image, theta, deformation):
     tensor_image = torch.tensor(image[None, None, :, :], dtype=torch.float)
     tensor_deformation = torch.tensor(deformation.transpose((2, 0, 1))[None],
                                       dtype=torch.float)
+    if use_theta:
+        if isinstance(theta, np.ndarray):
+            theta = torch.tensor(theta[None], dtype=torch.float)
 
-    if isinstance(theta, np.ndarray):
-        theta = torch.tensor(theta[None], dtype=torch.float)
-
-    grid = F.affine_grid(theta, tensor_image.size())
-    tensor_image = F.grid_sample(tensor_image, grid)
+        grid = F.affine_grid(theta, tensor_image.size())
+        tensor_image = F.grid_sample(tensor_image, grid)
 
     deformed_image = SP(tensor_image, tensor_deformation).squeeze()
     deformed_image = deformed_image.numpy().astype(image.dtype)
     return deformed_image, deformation
 
 
-def save(seq, thetas, deformations, path, name):
+def save(seq, thetas, deformations, path, name, use_theta=True):
     os.makedirs(path, exist_ok=True)
     os.makedirs(path + '/deformations/', exist_ok=True)
     os.makedirs(path + '/thetas/', exist_ok=True)
@@ -141,7 +141,8 @@ def save(seq, thetas, deformations, path, name):
             new_seq.append(im)
             new_def.append(np.zeros(tuple(im.shape[:2]) + (2,)))
         else:
-            deformed_image, deformation = apply_theta_and_deformation2image(im, thetas[i], deformations[i])
+            deformed_image, deformation = apply_theta_and_deformation2image(im, thetas[i],
+                                                                            deformations[i], use_theta=use_theta)
             new_def.append(deformation)
             new_seq.append(deformed_image)
 
@@ -207,6 +208,7 @@ def predict(config: InferenceConfig):
         new_mask_seq = mask_seq.copy()
         # small_seq = np.zeros((len(seq),) + (256, 256))
         # small_mask_seq = np.zeros((len(seq),) + (256, 256))
+        model_output = {}
 
         for i in tqdm(range(len(seq) - 2, -1, -1)):
             for j in range(len(seq) - 1, i, -1):
@@ -228,23 +230,38 @@ def predict(config: InferenceConfig):
 
                 # show(moving, fixed.squeeze(),
                 #      registered.squeeze())
-                new_seq[j] = apply_theta_and_deformation2image(new_seq[j], model_output['theta'].detach().cpu(),
-                                                               deformation[0])[0]
+                if 'theta' in model_output:
+                    new_seq[j] = apply_theta_and_deformation2image(new_seq[j],
+                                                                   model_output['theta'].detach().cpu(),
+                                                                   deformation[0])[0]
+                else:
+                    new_seq[j] = apply_theta_and_deformation2image(new_seq[j],
+                                                                   None,
+                                                                   deformation[0], use_theta=False)[0]
                 # prev_mask = new_mask_seq[j].copy()
                 if config.use_masks:
-                    new_mask_seq[j] = \
-                    apply_theta_and_deformation2image(new_mask_seq[j], model_output['theta'].detach().cpu(),
-                                                      deformation[0])[0]
+                    if 'theta' in model_output:
+                        new_mask_seq[j] = \
+                        apply_theta_and_deformation2image(new_mask_seq[j],
+                                                          model_output['theta'].detach().cpu(),
+                                                          deformation[0])[0]
+                    else:
+                        new_mask_seq[j] = \
+                            apply_theta_and_deformation2image(new_mask_seq[j],
+                                                              None,
+                                                              deformation[0],
+                                                              use_theta=False)[0]
 
                 # show(prev_mask, mask_seq[i], new_mask_seq[j], '2registered')
 
                 defs[j] = ff_1_to_k(defs[j], deformation[0])
-                new_theta = np.concatenate([model_output['theta'].detach().cpu().numpy()[0], np.array([[0, 0, 1]])], 0)
-                new_theta = np.concatenate([thetas[j],
-                                            np.array([[0, 0, 1]])], 0) @ new_theta
-                thetas[j] = new_theta[:2][None]
+                if 'theta' in model_output:
+                    new_theta = np.concatenate([model_output['theta'].detach().cpu().numpy()[0], np.array([[0, 0, 1]])], 0)
+                    new_theta = np.concatenate([thetas[j],
+                                                np.array([[0, 0, 1]])], 0) @ new_theta
+                    thetas[j] = new_theta[:2][None]
 
-        save(seq, thetas, defs, config.save_path, file.split('/')[-1])
+        save(seq, thetas, defs, config.save_path, file.split('/')[-1], use_theta='theta' in model_output)
         save256(new_seq, config.save_path + '/image_deformed/', file.split('/')[-1])
 
 

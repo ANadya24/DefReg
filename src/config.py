@@ -8,6 +8,7 @@ class ModelConfig(BaseModel):
     model_name: str
     in_channels: int = 1
     image_size: int = 128
+    use_theta: bool = True
 
 
 class DatasetConfig(BaseModel):
