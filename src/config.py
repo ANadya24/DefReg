@@ -68,6 +68,7 @@ class Config(BaseModel):
     load_epoch: int = 0
     model_path: str = ""
     num_workers: int = 4
+    validate_by_points: bool = True
     save_step: int = 20
     model_name: str = "model"
     tensorboard: bool = True
