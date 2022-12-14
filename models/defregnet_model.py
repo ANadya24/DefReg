@@ -60,8 +60,9 @@ class DefRegNet(nn.Module):
     
     def to(self, device):
         super().to(device)
-        self.localization = self.localization.to(device)
-        self.fc_loc = self.fc_loc.to(device)
+        if self.use_theta:
+            self.localization = self.localization.to(device)
+            self.fc_loc = self.fc_loc.to(device)
         self.unet = self.unet.to(device)
         self.spatial_transform.device = device
         return self
