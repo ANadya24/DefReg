@@ -62,7 +62,8 @@ if __name__ == "__main__":
                             register_limit=config.dataset.register_limit,
                             use_crop=config.dataset.use_crop,
                             use_masks=config.dataset.use_masks,
-                            multiply_mask=config.dataset.multiply_mask)
+                            multiply_mask=config.dataset.multiply_mask,
+                            return_points=args.validate_by_points)
 
     val_dataset = Dataset(image_sequences=config.val_dataset.image_sequences,
                           image_keypoints=config.val_dataset.image_keypoints,
@@ -71,7 +72,8 @@ if __name__ == "__main__":
                           register_limit=config.val_dataset.register_limit,
                           use_crop=config.val_dataset.use_crop,
                           use_masks=config.val_dataset.use_masks,
-                          multiply_mask=config.val_dataset.multiply_mask)
+                          multiply_mask=config.val_dataset.multiply_mask,
+                          return_points=args.validate_by_points)
 
     print("Length of train set:", len(train_dataset))
     print("Length of validation set:", len(val_dataset))
@@ -109,4 +111,5 @@ if __name__ == "__main__":
           log_dir=config.logdir,
           load_epoch=config.load_epoch,
           max_epochs=config.num_epochs,
-          use_tensorboard=config.tensorboard)
+          use_tensorboard=config.tensorboard,
+          validate_by_points=args.validate_by_points)

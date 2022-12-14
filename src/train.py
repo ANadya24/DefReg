@@ -55,7 +55,7 @@ def train_model(input_batch: torch.Tensor,
     losses = loss(output_dict)
     train_loss = losses['total_loss']
     train_loss.backward()
-    
+
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
 
     optimizer.step()
@@ -84,7 +84,7 @@ def apply_deformation_2points(batch_points: torch.Tensor,
                               torch.arange(w))
         y = y.to(deformation.device)
         x = x.to(deformation.device)
-        
+
         x = x + deformation[0]
         y = y + deformation[1]
 
@@ -110,9 +110,9 @@ def apply_deformation_2points(batch_points: torch.Tensor,
 
 
 def apply_deformation_theta_2points(batch_points: torch.Tensor,
-                              batch_deformation: torch.Tensor,
-                              batch_theta: torch.Tensor,
-                              num_points_interpolation=4):
+                                    batch_deformation: torch.Tensor,
+                                    batch_theta: torch.Tensor,
+                                    num_points_interpolation=4):
     # if isinstance(batch_points, np.ndarray):
     #     batch_points = torch.Tensor(batch_points).to(device)
     #
@@ -124,8 +124,9 @@ def apply_deformation_theta_2points(batch_points: torch.Tensor,
         theta = batch_theta[i]
         theta = torch.tensor(cvt_ThetaToM(theta.cpu().numpy(), w, h), dtype=batch_theta.dtype).to(batch_theta.device)
         points = batch_points[i]
-        points = theta @ torch.cat((points, torch.ones((len(points), 1), device=batch_theta.device, dtype=points.dtype)),
-                                   dim=1).permute(1, 0)
+        points = theta @ torch.cat(
+            (points, torch.ones((len(points), 1), device=batch_theta.device, dtype=points.dtype)),
+            dim=1).permute(1, 0)
         batch_points[i] = points.permute(1, 0)[:, :2]
 
         y, x = torch.meshgrid(torch.arange(h),
@@ -168,37 +169,37 @@ def calculate_point_metrics(batch_points1: torch.Tensor,
     #     batch_points_len = batch_points_len.detach().cpu().numpy()
 
     error = ((((batch_points1 - batch_points2) ** 2).sum(axis=2)) ** 0.5).sum(axis=1) / batch_points_len.sum(axis=1)
-    
+
     output = {'points_error_l2': torch.mean(error)}
 
-#         inner1 = points1[:points_len[0]]
-#         inner2 = points2[:points_len[0]]
+    #         inner1 = points1[:points_len[0]]
+    #         inner2 = points2[:points_len[0]]
 
-#         bound1 = points1[points_len[0]: points_len[1]]
-#         bound2 = points2[points_len[0]: points_len[1]]
+    #         bound1 = points1[points_len[0]: points_len[1]]
+    #         bound2 = points2[points_len[0]: points_len[1]]
 
-#         lines1 = points1[points_len[1]:]
-#         lines2 = points2[points_len[1]:]
-#         len1, len2, len3, len4 = points_len[2:]
+    #         lines1 = points1[points_len[1]:]
+    #         lines2 = points2[points_len[1]:]
+    #         len1, len2, len3, len4 = points_len[2:]
 
-#         inner_err = ((((inner1 - inner2) ** 2).sum(axis=1)) ** 0.5).sum(axis=0) / float(inner1.shape[1])
+    #         inner_err = ((((inner1 - inner2) ** 2).sum(axis=1)) ** 0.5).sum(axis=0) / float(inner1.shape[1])
 
-#         bound_err = ((((bound1 - bound2) ** 2).sum(axis=1)) ** 0.5).sum(axis=0) / float(bound1.shape[1])
+    #         bound_err = ((((bound1 - bound2) ** 2).sum(axis=1)) ** 0.5).sum(axis=0) / float(bound1.shape[1])
 
-#         b1 = frechetDist(lines1[:len1], lines2[:len1])
-#         b2 = frechetDist(lines1[len1:len1 + len2], lines2[len1:len1 + len2])
-#         b3 = frechetDist(lines1[len1 + len2:len1 + len2 + len3],
-#                          lines2[len1 + len2:len1 + len2 + len3])
-#         b4 = frechetDist(lines1[len1 + len2 + len3:len1 + len2 + len3 + len4],
-#                          lines2[len1 + len2 + len3:len1 + len2 + len3 + len4])
-#         line_err = (b1 + b2 + b3 + b4) / 4.
-        # err['inner'].append(inner_err)
-        # err['bound'].append(bound_err)
-        # err['lines'].append(line_err)
+    #         b1 = frechetDist(lines1[:len1], lines2[:len1])
+    #         b2 = frechetDist(lines1[len1:len1 + len2], lines2[len1:len1 + len2])
+    #         b3 = frechetDist(lines1[len1 + len2:len1 + len2 + len3],
+    #                          lines2[len1 + len2:len1 + len2 + len3])
+    #         b4 = frechetDist(lines1[len1 + len2 + len3:len1 + len2 + len3 + len4],
+    #                          lines2[len1 + len2 + len3:len1 + len2 + len3 + len4])
+    #         line_err = (b1 + b2 + b3 + b4) / 4.
+    # err['inner'].append(inner_err)
+    # err['bound'].append(bound_err)
+    # err['lines'].append(line_err)
 
     # output = {'inner': np.mean(err['inner']),
     #           'bound': np.mean(err['bound']),}
-              # 'lines': np.mean(err['lines'])}
+    # 'lines': np.mean(err['lines'])}
 
     return output
 
@@ -219,7 +220,7 @@ def validate_model(input_batch: torch.Tensor,
             device), batch_moving.to(device)
 
         output_dict = model(batch_moving, batch_fixed)
-        
+
         output_dict.update({'batch_fixed': batch_fixed, 'batch_moving': batch_moving})
 
         losses = loss(output_dict)
@@ -242,8 +243,8 @@ def validate_model(input_batch: torch.Tensor,
                 points_moving.to(device),
                 output_dict['batch_deformation'])
 
-        metrics = calculate_point_metrics(points_fixed, 
-                                          registered_points.to(points_fixed.device), 
+        metrics = calculate_point_metrics(points_fixed,
+                                          registered_points.to(points_fixed.device),
                                           points_len)
 
         metrics2 = calculate_point_metrics(points_fixed, points_moving, points_len)
@@ -265,6 +266,7 @@ def train(model: torch.nn.Module,
           load_epoch: int = 0,
           max_epochs: int = 1000,
           use_tensorboard: bool = False,
+          validate_by_points: bool = True
           ):
     def save_model(model, name):
         if isinstance(model, torch.nn.DataParallel):
@@ -345,12 +347,12 @@ def train(model: torch.nn.Module,
         if nan_flag:
             print('found nans in network outputs in the epoch', epoch)
             break
-        
+
         # Testing
         total = 0
         # time_batches = 0
         for batch in val_loader:
-            time_batch_start = time()
+            # time_batch_start = time()
             batch_losses, batch_metrics = validate_model(input_batch=batch,
                                                          model=model,
                                                          device=device,
@@ -358,7 +360,7 @@ def train(model: torch.nn.Module,
                                                          save_step=save_step,
                                                          image_dir=image_dir + '/images/',
                                                          epoch=epoch,
-                                                         return_point_metrics=True)
+                                                         return_point_metrics=validate_by_points)
 
             for key in batch_losses:
                 val_losses[key] += batch_losses[key].item()
