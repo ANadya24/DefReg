@@ -38,6 +38,8 @@ class DefRegNet(nn.Module):
 
             self.fc_loc[2].weight.data.zero_()
             self.fc_loc[2].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
+            self.localization = self.localization.to(device)
+            self.fc_loc = self.fc_loc.to(device)
         else:
             self.localization = None
             self.fc_loc = None
@@ -47,8 +49,6 @@ class DefRegNet(nn.Module):
         self.spatial_transform = SpatialTransformation(device=device)
         self.unet.apply(init_weights)
 
-        self.localization = self.localization.to(device)
-        self.fc_loc = self.fc_loc.to(device)
         self.unet = self.unet.to(device)
         # self.spatial_transform = self.spatial_transform.to(device)
         self.spatial_transform.device = device
