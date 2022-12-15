@@ -33,6 +33,18 @@ class DenoiseRegNet(nn.Module):
         self.reg_fc[3].weight.data.zero_()
         self.reg_fc[3].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
 
+    def add_noise(self, input_image):
+        shape = input_image.shape
+        size = 1
+        for i in shape:
+            size *= i
+        mask = torch.zeros(shape, requires_grad=False)
+        idxs = torch.randint(0, mask.size()[0] - 1, size=(int(0.5 * mask.size()[0]),))
+        mask[idxs] = 1
+        mask = mask.reshape(*shape)
+        noise_image = input_image * mask
+        return noise_image
+
     def run_denoising(self, input_image):
         encode_block1 = self.denoise_unet.conv_encode1(input_image)
         encode_pool1 = self.denoise_unet.conv_maxpool1(encode_block1)
@@ -54,8 +66,12 @@ class DenoiseRegNet(nn.Module):
         return final_layer, features
 
     def forward(self, fixed_image, moving_image):
-        denoised_moving, moving_features = self.run_denoising(moving_image)
-        denoised_fixed, fixed_features = self.run_denoising(fixed_image)
+
+        noise_fixed_image = self.add_noise(fixed_image)
+        noise_moving_image = self.add_noise(moving_image)
+
+        denoised_moving, moving_features = self.run_denoising(noise_moving_image)
+        denoised_fixed, fixed_features = self.run_denoising(noise_fixed_image)
 
         pair_fm = torch.cat([fixed_features, moving_features], dim=1)
         pair_mf = torch.cat([moving_features, fixed_features], dim=1)

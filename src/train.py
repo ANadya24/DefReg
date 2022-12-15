@@ -300,6 +300,7 @@ def train(model: torch.nn.Module,
         summary_writer = SummaryWriter(log_dir=log_dir)
 
     best_metric_values = defaultdict(float)
+    best_loss_value = None
 
     for epoch in range(load_epoch, max_epochs):
         # time_epoch_start = time()
@@ -398,6 +399,9 @@ def train(model: torch.nn.Module,
             if key == 'total_loss':
                 continue
             print('Epoch', epoch + 1, f'{key} train/test: ', train_losses[key], '/', val_losses[key])
+        if best_loss_value is None or best_loss_value > val_losses['total_loss']:
+            best_loss_value = val_losses['total_loss']
+            save_model(model, model_name + '_loss_best')
 
         print()
         for key in val_metrics:
