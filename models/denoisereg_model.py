@@ -12,7 +12,7 @@ class DenoiseRegNet(nn.Module):
     LIVE CELL MICROSCOPY IMAGES USING DEEP LEARNING
     """
 
-    def __init__(self, in_channels, device):
+    def __init__(self, in_channels=1, image_size=256, device='cpu'):
         super(DenoiseRegNet, self).__init__()
 
         ####Denoising part####
@@ -20,7 +20,7 @@ class DenoiseRegNet(nn.Module):
         self.denoise_global = nn.AdaptiveAvgPool2d((1, 1))
 
         ####Registration part####
-
+        
         self.reg_fc = nn.Sequential(
             nn.Linear(64 * 2, 32),
             nn.BatchNorm1d(32),
@@ -42,10 +42,10 @@ class DenoiseRegNet(nn.Module):
         size = 1
         for i in shape:
             size *= i
-        mask = torch.zeros(shape, requires_grad=False)
-        idxs = torch.randint(0, mask.size()[0] - 1, size=(int(0.5 * mask.size()[0]),))
+        mask = torch.zeros(size, requires_grad=False)
+        idxs = torch.randint(0, size - 1, size=(int(0.5 * size),))
         mask[idxs] = 1
-        mask = mask.reshape(*shape)
+        mask = mask.reshape(*shape).to(input_image.device)
         noise_image = input_image * mask
         return noise_image, 1 - mask
 
@@ -79,12 +79,13 @@ class DenoiseRegNet(nn.Module):
 
         pair_fm = torch.cat([fixed_features, moving_features], dim=1)
         pair_mf = torch.cat([moving_features, fixed_features], dim=1)
-
-        theta_fm = self.reg_fc(pair_fm)
+        
+        batch_size = fixed_image.size()[0]
+        theta_fm = self.reg_fc(pair_fm.reshape(batch_size, -1)).reshape(batch_size, 2, 3)
         grid = F.affine_grid(theta_fm, denoised_moving.size())
         trf_moving_image = F.grid_sample(denoised_moving, grid)
 
-        theta_mf = self.reg_fc(pair_mf)
+        theta_mf = self.reg_fc(pair_mf.reshape(batch_size, -1)).reshape(batch_size, 2, 3)
         grid = F.affine_grid(theta_mf, denoised_fixed.size())
         trf_fixed_image = F.grid_sample(denoised_fixed, grid)
 

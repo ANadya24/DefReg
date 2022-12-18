@@ -3,5 +3,6 @@ from .loss_classes import (
     NCCLoss,
     SSIMLoss,
     DiceLoss,
-    DeformationSmooth
+    DeformationSmooth,
+    MaskedL1Loss
 )

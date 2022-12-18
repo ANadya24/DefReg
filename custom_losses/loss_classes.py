@@ -55,7 +55,7 @@ class MaskedL1Loss(nn.Module):
     def forward(self, pred, target, mask):
         abs_diff = torch.abs((pred - target) * mask).sum([1, 2, 3])
         loss = abs_diff / (mask.sum([1, 2, 3]) + 1e-7)
-        return loss
+        return loss.mean()
 
 
 class DiceLoss(nn.Module):
@@ -104,6 +104,7 @@ class CustomCriterion(nn.Module):
                 if key in detach_values:
                     input_values[key] = input_values[key].detach()
             cur_loss = loss_function(**input_values)
+
             if return_flag:
                 losses2return[loss_name] = cur_loss
 

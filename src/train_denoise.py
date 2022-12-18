@@ -47,7 +47,7 @@ def train_model(input_batch: torch.Tensor,
         save_validation_images(batch_fixed, batch_moving, output_dict['affine_moving_image'],
                                torch.Tensor(0.), None,
                                image_dir=image_dir, epoch=epoch + 1, train=True)
-    losses['nans'] = output_dict['nans']
+    # losses['nans'] = output_dict['nans']
 
     return losses
 
@@ -191,10 +191,10 @@ def train(model: torch.nn.Module,
                                        save_step=save_step,
                                        image_dir=image_dir + '/images/',
                                        epoch=epoch)
-            nan_flag = batch_losses['nans']
-            batch_losses.pop('nans')
-            if nan_flag:
-                break
+            # nan_flag = batch_losses['nans']
+            # batch_losses.pop('nans')
+            # if nan_flag:
+            #     break
 
             for key in batch_losses:
                 train_losses[key] += batch_losses[key].item()
@@ -213,9 +213,9 @@ def train(model: torch.nn.Module,
         for key in train_losses:
             train_losses[key] /= total
 
-        if nan_flag:
-            print('found nans in network outputs in the epoch', epoch)
-            break
+        # if nan_flag:
+        #     print('found nans in network outputs in the epoch', epoch)
+        #     break
 
         # Testing
         total = 0

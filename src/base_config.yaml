@@ -2,7 +2,7 @@ batch_size: 4
 criterion:
   losses:
   - input_keys:
-      pred: predicted_image
+      input: predicted_image
       target: fixed_image
     loss_name: MSELoss
     loss_parameters:
@@ -15,6 +15,7 @@ criterion:
     loss_name: L1Loss
     loss_parameters: {}
     return_loss: false
+    detach_values: []
     weight: 1.0
 dataset:
   im_size: !!python/tuple

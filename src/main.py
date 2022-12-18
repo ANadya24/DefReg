@@ -39,7 +39,10 @@ if __name__ == "__main__":
 
     model_args = config.model.dict()
     model_args.pop('model_name')
-    model = getattr(models, model_name)(device=config.device, **model_args)
+    if config.model.model_name == 'DenoiseRegNet':
+        model = getattr(models, model_name)(device=config.device, in_channels=model_args['in_channels'])
+    else:
+        model = getattr(models, model_name)(device=config.device, **model_args)
 
     checkpoint = None
     if config.load_epoch:
@@ -83,7 +86,8 @@ if __name__ == "__main__":
     params = {'batch_size': config.batch_size,
               'num_workers': config.num_workers,
               'shuffle': False,
-              'pin_memory': True}
+              'pin_memory': True,
+              'drop_last': True}
     training_generator = data.DataLoader(train_dataset, **params)
     validation_generator = data.DataLoader(val_dataset, **params)
     optimizer = getattr(torch.optim, config.optimizer.name)(
