@@ -12,7 +12,7 @@ class DenoiseRegNet(nn.Module):
     LIVE CELL MICROSCOPY IMAGES USING DEEP LEARNING
     """
 
-    def __init__(self, in_channels):
+    def __init__(self, in_channels, device):
         super(DenoiseRegNet, self).__init__()
 
         ####Denoising part####
@@ -32,6 +32,10 @@ class DenoiseRegNet(nn.Module):
 
         self.reg_fc[3].weight.data.zero_()
         self.reg_fc[3].bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
+
+        self.denoise_unet.to(device)
+        self.denoise_global.to(device)
+        self.reg_fc.to(device)
 
     def add_noise(self, input_image):
         shape = input_image.shape
