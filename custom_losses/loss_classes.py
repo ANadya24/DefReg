@@ -48,6 +48,16 @@ class SSIMLoss(nn.Module):
         return ssim_loss(pred, target)
 
 
+class MaskedL1Loss(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, pred, target, mask):
+        abs_diff = torch.abs((pred - target) * mask).sum([1, 2, 3])
+        loss = abs_diff / (mask.sum([1, 2, 3]) + 1e-7)
+        return loss
+
+
 class DiceLoss(nn.Module):
     def __init__(self):
         super().__init__()

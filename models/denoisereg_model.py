@@ -43,7 +43,7 @@ class DenoiseRegNet(nn.Module):
         mask[idxs] = 1
         mask = mask.reshape(*shape)
         noise_image = input_image * mask
-        return noise_image
+        return noise_image, 1 - mask
 
     def run_denoising(self, input_image):
         encode_block1 = self.denoise_unet.conv_encode1(input_image)
@@ -67,8 +67,8 @@ class DenoiseRegNet(nn.Module):
 
     def forward(self, fixed_image, moving_image):
 
-        noise_fixed_image = self.add_noise(fixed_image)
-        noise_moving_image = self.add_noise(moving_image)
+        noise_fixed_image, fixed_mask = self.add_noise(fixed_image)
+        noise_moving_image, moving_mask = self.add_noise(moving_image)
 
         denoised_moving, moving_features = self.run_denoising(noise_moving_image)
         denoised_fixed, fixed_features = self.run_denoising(noise_fixed_image)
@@ -89,7 +89,9 @@ class DenoiseRegNet(nn.Module):
                   'theta_moving2fixed': theta_fm,
                   'theta_fixed2moving': theta_mf,
                   'affine_fixed_image': trf_fixed_image,
-                  'affine_moving_image': trf_moving_image}
+                  'affine_moving_image': trf_moving_image,
+                  'pixel_mask_fixed': fixed_mask,
+                  'pixel_mask_moving': moving_mask}
         return output
 
 
