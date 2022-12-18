@@ -24,7 +24,7 @@ class CrossCorrelationLoss(nn.Module):
                                           n=self.n, use_gpu=self.use_gpu)
         return cross_correlation_loss(pred, target,
                                       n=self.n, use_gpu=self.use_gpu)
-    
+
 
 class NCCLoss(nn.Module):
     def __init__(self):
@@ -76,19 +76,23 @@ class CustomCriterion(nn.Module):
         for loss in criterion_config.losses:
             try:
                 self.losses.append((getattr(custom_losses, loss.loss_name)(**loss.loss_parameters),
-                                    loss.weight, loss.input_keys, loss.loss_name, loss.return_loss))
-            except:
+                                    loss.weight, loss.input_keys, loss.loss_name, loss.return_loss,
+                                    loss.detach_values))
+            except AttributeError:
                 self.losses.append((getattr(torch.nn, loss.loss_name)(**loss.loss_parameters),
-                                loss.weight, loss.input_keys, loss.loss_name, loss.return_loss))
- 
+                                    loss.weight, loss.input_keys, loss.loss_name, loss.return_loss,
+                                    loss.detach_values))
 
     def forward(self, input_dict):
         losses2return = {}
         loss = 0
-        for loss_function, loss_weight, loss_input, loss_name, return_flag in self.losses:
+        for loss_function, loss_weight, loss_input, loss_name, \
+            return_flag, detach_values in self.losses:
             input_values = {}
             for key in loss_input:
                 input_values[key] = input_dict[loss_input[key]]
+                if key in detach_values:
+                    input_values[key] = input_values[key].detach()
             cur_loss = loss_function(**input_values)
             if return_flag:
                 losses2return[loss_name] = cur_loss

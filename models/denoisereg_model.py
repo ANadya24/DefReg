@@ -92,11 +92,11 @@ class DenoiseRegNet(nn.Module):
                   'affine_moving_image': trf_moving_image}
         return output
 
-    
 
 class DenoiseDefRegNet(nn.Module):
     """
     DenoiseReg + DefRegNet
+    #TODO add symmetric deformation application
     """
 
     def __init__(self, in_channels, image_size=128, device='cpu',
