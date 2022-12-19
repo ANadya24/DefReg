@@ -19,7 +19,7 @@ from time import time
 def save_validation_images(batch_fixed: torch.Tensor,
                            batch_moving: torch.Tensor,
                            batch_registered: torch.Tensor,
-                           batch_deformation: torch.Tensor,
+                           batch_deformation: Optional[torch.Tensor],
                            gt_deformation: Optional[torch.Tensor],
                            image_dir: str, epoch: int, train: bool = True,
                            num_images2save: int = 3):
@@ -28,7 +28,7 @@ def save_validation_images(batch_fixed: torch.Tensor,
                     batch_registered[:num_images2save],
                     val_dir=image_dir, epoch=epoch + 1, train=train)
 
-    if gt_deformation is not None:
+    if gt_deformation is not None and batch_deformation is not None:
         validate_deformations(batch_deformation[:num_images2save],
                               gt_deformation[:num_images2save],
                               val_dir=image_dir, epoch=epoch + 1, train=train)

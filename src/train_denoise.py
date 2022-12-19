@@ -45,7 +45,7 @@ def train_model(input_batch: torch.Tensor,
 
     if (epoch + 1) % save_step == 0:
         save_validation_images(batch_fixed, batch_moving, output_dict['affine_moving_image'],
-                               torch.Tensor(0.), None,
+                               None, None,
                                image_dir=image_dir, epoch=epoch + 1, train=True)
     # losses['nans'] = output_dict['nans']
 
@@ -100,7 +100,7 @@ def validate_model(input_batch: torch.Tensor,
 
     if (epoch + 1) % save_step == 0:
         save_validation_images(batch_fixed, batch_moving, output_dict['affine_moving_image'],
-                               torch.Tensor(0.), None,
+                               None, None,
                                image_dir=image_dir, epoch=epoch + 1, train=False)
 
     if return_point_metrics:
