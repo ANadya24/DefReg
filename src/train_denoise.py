@@ -62,9 +62,9 @@ def apply_theta_2points(batch_points: torch.Tensor,
     # if isinstance(batch_deformation, np.ndarray):
     #     batch_deformation = torch.Tensor(batch_deformation).to(device)
 
-    for i, theta in enumerate(batch_theta):
-        theta = batch_theta[i]
-        theta = torch.tensor(cvt_ThetaToM(theta.cpu().numpy(), w, h),
+    for i, torch_theta in enumerate(batch_theta):
+        # theta = batch_theta[i]
+        theta = torch.tensor(cvt_ThetaToM(torch_theta.cpu().numpy(), w, h),
                              dtype=batch_theta.dtype).to(batch_theta.device)
         points = batch_points[i]
         points = theta @ torch.cat(
