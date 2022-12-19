@@ -87,17 +87,17 @@ class CustomCriterion(nn.Module):
             try:
                 self.losses.append((getattr(custom_losses, loss.loss_name)(**loss.loss_parameters),
                                     loss.weight, loss.input_keys, loss.loss_name, loss.return_loss,
-                                    loss.detach_values))
+                                    loss.detach_values, loss.prefix))
             except AttributeError:
                 self.losses.append((getattr(torch.nn, loss.loss_name)(**loss.loss_parameters),
                                     loss.weight, loss.input_keys, loss.loss_name, loss.return_loss,
-                                    loss.detach_values))
+                                    loss.detach_values, loss.prefix))
 
     def forward(self, input_dict):
         losses2return = {}
         loss = 0
         for loss_function, loss_weight, loss_input, loss_name, \
-            return_flag, detach_values in self.losses:
+            return_flag, detach_values, loss_prefix in self.losses:
             input_values = {}
             for key in loss_input:
                 input_values[key] = input_dict[loss_input[key]]
@@ -106,7 +106,7 @@ class CustomCriterion(nn.Module):
             cur_loss = loss_function(**input_values)
 
             if return_flag:
-                losses2return[loss_name] = cur_loss
+                losses2return[loss_name + loss_prefix] = cur_loss
 
             loss += loss_weight * cur_loss
         losses2return['total_loss'] = loss

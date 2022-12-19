@@ -29,6 +29,7 @@ class LossConfig(BaseModel):
     loss_parameters: Dict[str, Any]
     return_loss: bool = False
     detach_values: List[str] = []
+    prefix: str = ''
 
 
 class CriterionConfig(BaseModel):
