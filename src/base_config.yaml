@@ -39,6 +39,7 @@ model:
   in_channels: 1
   model_name: DefRegNet
   use_theta: true
+  use_diffeomorphic: false
 model_name: model
 model_path: ''
 num_epochs: 100

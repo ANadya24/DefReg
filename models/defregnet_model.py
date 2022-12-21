@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from basic_nets.spatial_transform import SpatialTransformation
 from basic_nets.unet import UNet
 from basic_nets.utils import init_weights
+from basic_nets.diffeomorphic import Diffeomorphic
 
 
 class DefRegNet(nn.Module):
@@ -14,11 +15,15 @@ class DefRegNet(nn.Module):
     """
 
     def __init__(self, in_channels, image_size=128, device='cpu',
-                 use_theta: bool = True):
+                 use_theta: bool = True, use_diffeomorphic: bool = False):
         super(DefRegNet, self).__init__()
 
         #################################
         self.use_theta = use_theta
+        self.use_diffeomorphic = use_diffeomorphic
+        if self.use_diffeomorphic:
+            self.diffeomorphic = Diffeomorphic(image_size=(image_size, image_size),
+                                               scaling=2, dtype=torch.float32, device=device)
         if self.use_theta:
             self.localization = nn.Sequential(
                 nn.Conv2d(in_channels, 6, kernel_size=(7, 7)),
@@ -89,6 +94,8 @@ class DefRegNet(nn.Module):
         # diff = batch_fixed - batch_moving
         x = torch.cat([batch_affine_moving, batch_fixed], dim=1)
         batch_deformation = self.unet(x)
+        if self.use_diffeomorphic:
+            batch_deformation = self.diffeomorphic.calculate(batch_deformation)
         batch_registered = self.spatial_transform(batch_affine_moving,
                                                   batch_deformation)
         # print('batch_deformation', batch_deformation.min(), batch_deformation.max())
