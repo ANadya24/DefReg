@@ -170,7 +170,7 @@ def compute_frechet_error_sequence(points, length_of_lines, first_points=None):
         prev_line_len = 0
         for i, line_len in enumerate(length_of_lines):
             bs[frame, i] = frechetDist(points[frame, prev_line_len:prev_line_len + line_len],
-                                       first_points[frame, prev_line_len:prev_line_len + line_len])
+                                       first_points[prev_line_len:prev_line_len + line_len])
             prev_line_len += line_len
     err = (bs.sum(axis=1)) / len(length_of_lines)
     return err
