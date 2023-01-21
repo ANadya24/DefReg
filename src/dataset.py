@@ -123,7 +123,7 @@ class Dataset(data.Dataset):
 
         self.to_tensor = ToTensor()
 
-        if self.train:
+        if self.train or not self.return_points:
             self.resize = A.Resize(*self.im_size)
         else:
             self.resize = A.Compose([A.Resize(*self.im_size)],
@@ -270,5 +270,5 @@ class Dataset(data.Dataset):
 
         if self.train or not self.return_points:
             return image1, image2
-
+        
         return image1, image2, points1, points2, points_len.astype(np.int32)

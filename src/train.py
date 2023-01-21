@@ -250,7 +250,7 @@ def validate_model(input_batch: torch.Tensor,
         metrics2 = calculate_point_metrics(points_fixed, points_moving, points_len)
         metrics['points_error_l2_prev'] = metrics2['points_error_l2']
         return losses, metrics
-    return losses
+    return losses, {}
 
 
 def train(model: torch.nn.Module,

@@ -41,6 +41,8 @@ if __name__ == "__main__":
         subf = args.base_prediction_path + '/numpy/'
 
         baseline_def_name = subf + seq_name.split('/')[-1].split('.tif')[0] + f'_{args.prefix}.npy'
+        baseline_def_name = baseline_def_name.replace('_mask', '')
+        print(baseline_def_name)
         if not os.path.exists(baseline_def_name):
             baseline_def_name = baseline_def_name.replace('init_', '')
             if not os.path.exists(baseline_def_name):
