@@ -31,7 +31,7 @@ if __name__ == "__main__":
         subf = ('/').join(seq_name.split('/')[:-2]) + '/elastic_deformations/numpy/'
         print(subf)
         baseline_def_name = subf + seq_name.split('/')[-1].split('.tif')[0] + f'_bcw.npy'
-        base_deformation = np.load(baseline_def_name)
+        base_deformation = np.load(baseline_def_name).astype('float32')
 
         in_sh = images.shape
 
