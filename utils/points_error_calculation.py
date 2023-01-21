@@ -121,7 +121,7 @@ def plot_bef_aft(init_err, err, base_err, title='test', x_label='', y_label='', 
 def draw(img, points, lens, color):
     im = img.copy()
     bound, inner, lines = points
-    len1, len2,len3, len4 = lens
+    len1, len2, len3, len4 = lens
     for p in bound:
         cv2.circle(im, tuple(p.astype('int')), 3, color, -1)
     for p in inner:
@@ -129,13 +129,48 @@ def draw(img, points, lens, color):
     line = lines[:len1]
     for p1, p2 in zip(line[:-1], line[1:]):
         cv2.line(im, tuple(p1.astype('int')), tuple(p2.astype('int')), color, 2)
-    line = lines[len1:len1+len2]
+    line = lines[len1:len1 + len2]
     for p1, p2 in zip(line[:-1], line[1:]):
         cv2.line(im, tuple(p1.astype('int')), tuple(p2.astype('int')), color, 2)
-    line = lines[len1+len2:len1+len2+len3]
+    line = lines[len1 + len2:len1 + len2 + len3]
     for p1, p2 in zip(line[:-1], line[1:]):
         cv2.line(im, tuple(p1.astype('int')), tuple(p2.astype('int')), color, 2)
-    line = lines[len3+len2+len1:]
+    line = lines[len3 + len2 + len1:]
     for p1, p2 in zip(line[:-1], line[1:]):
         cv2.line(im, tuple(p1.astype('int')), tuple(p2.astype('int')), color, 2)
     return im
+
+
+def compute_l2_error_sequence(points, first_points=None):
+    if len(points.shape) == 2:
+        coord_axis = 1
+        point_axis = 0
+        assert first_points is not None
+    elif len(points.shape) == 3:
+        coord_axis = 2
+        point_axis = 1
+    else:
+        raise IOError
+    if first_points is None:
+        first_points = points[0][None]
+    err = ((((points - first_points) ** 2).sum(axis=coord_axis)) ** 0.5).sum(
+        axis=point_axis) / float(points.shape[point_axis])
+    return err
+
+
+def compute_frechet_error_sequence(points, length_of_lines, first_points=None):
+    assert len(points.shape) == 3, 'Shape of points must be (n_frames, n_points per frame, 2)'
+    assert isinstance(length_of_lines, list), 'Length of lines should be defined'
+
+    bs = np.zeros((len(points), len(length_of_lines)))
+    if first_points is None:
+        first_points = points[0]
+
+    for frame in range(len(points)):
+        prev_line_len = 0
+        for i, line_len in enumerate(length_of_lines):
+            bs[frame, i] = frechetDist(points[frame, prev_line_len:prev_line_len + line_len],
+                                       first_points[frame, prev_line_len:prev_line_len + line_len])
+            prev_line_len += line_len
+    err = (bs.sum(axis=1)) / len(length_of_lines)
+    return err

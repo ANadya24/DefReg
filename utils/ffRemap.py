@@ -20,7 +20,7 @@ def ffremap(def_prev, def_cur):
 
 def ffremap2(def_prev, def_cur):
     h, w, _ = def_prev.shape
-    x, y = np.meshgrid(np.arange(0, w), np.arange(0, h))
+    x, y = np.meshgrid(np.arange(w), np.arange(h))
     x_grid = x + def_prev[:, :, 0]
     y_grid = y + def_prev[:, :, 1]
     x_grid = np.clip(x_grid, 0, w - 2)
@@ -31,13 +31,13 @@ def ffremap2(def_prev, def_cur):
     iy = np.floor(y_grid).astype(np.int32)
 
     vy00 = def_cur[iy, ix, 1]
-    vy01 = def_cur[iy, ix + 1, 1]
-    vy10 = def_cur[iy + 1, ix, 1]
+    vy01 = def_cur[iy+1, ix, 1]
+    vy10 = def_cur[iy, ix+1, 1]
     vy11 = def_cur[iy + 1, ix + 1, 1]
 
     vx00 = def_cur[iy, ix, 0]
-    vx01 = def_cur[iy, ix + 1, 0]
-    vx10 = def_cur[iy + 1, ix, 0]
+    vx01 = def_cur[iy+1, ix, 0]
+    vx10 = def_cur[iy, ix+1, 0]
     vx11 = def_cur[iy + 1, ix + 1, 0]
 
     ys = (vy11 * cx * cy + vy10 * cy * (1 - cx) + vy01 * cx * (1 - cy) + vy00 * (1 - cx) * (
@@ -47,8 +47,8 @@ def ffremap2(def_prev, def_cur):
 
     new_def = np.zeros(def_prev.shape)
 
-    new_def[:, :, 0] = xs
-    new_def[:, :, 1] = ys
+    new_def[..., 0] = xs
+    new_def[..., 1] = ys
 
     return new_def
 
@@ -88,6 +88,33 @@ def dots_remap_bcw(dots, deformation, num=4):
     dots[:, 0] = np.clip(dots[:, 0], 0, w)
     dots[:, 1] = np.clip(dots[:, 1], 0, h)
     return dots
+
+
+def dots_remap_bcw_mt(dots, deformation, num=4):
+    h, w = deformation.shape[:2]
+    x, y = np.meshgrid(np.arange(1, w + 1), np.arange(1, h + 1))
+
+    def_x_grid = x + deformation[:, :, 0]
+    def_y_grid = y + deformation[:, :, 1]
+
+    def_x = deformation[..., 0]
+    def_y = deformation[..., 1]
+
+    valid_points = (dots[:, 0] > 0) * (dots[:, 1] > 0) * \
+                   (dots[:, 0] < w) * (dots[:, 1] < h) * ~np.isnan(dots[:, 0]) * ~np.isnan(dots[:, 1])
+    out_dots = dots.copy()
+    if valid_points.sum() != 0:
+        ind = np.where(valid_points > 0)[0]
+        for d in ind:
+            p_dist = (def_x_grid - dots[d, 0]) ** 2 + (def_y_grid - dots[d, 1]) ** 2
+            p_dist_ind = np.argsort(p_dist.reshape(-1))
+            fx = -np.mean(def_x[np.unravel_index(p_dist_ind[:num], p_dist.shape)])
+            fy = -np.mean(def_y[np.unravel_index(p_dist_ind[:num], p_dist.shape)])
+
+            out_dots[d, 0] += fx
+            out_dots[d, 1] += fy
+
+    return out_dots
 
 
 def ff_1_to_k(ff_1_to_k_minus_1, ff_k_minus_1_to_k):
