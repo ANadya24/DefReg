@@ -94,8 +94,10 @@ class DefRegNet(nn.Module):
         # diff = batch_fixed - batch_moving
         x = torch.cat([batch_affine_moving, batch_fixed], dim=1)
         batch_deformation = self.unet(x)
+
         if self.use_diffeomorphic:
             batch_deformation = self.diffeomorphic.calculate(batch_deformation)
+
         batch_registered = self.spatial_transform(batch_affine_moving,
                                                   batch_deformation)
         # print('batch_deformation', batch_deformation.min(), batch_deformation.max())
