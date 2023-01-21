@@ -154,6 +154,9 @@ class Diffeomorphic():
             scaling = Diffeomorphic._compute_scaling_value(displacement)
 
         displacement = displacement / (2 ** scaling)
+        if len(displacement.size) < 4:
+            displacement = displacement.unsqueeze(0)
+        bs, ch, h, w = displacement.shape
 
         displacement = displacement.transpose(2, 1).transpose(1, 0).unsqueeze(0)
 
