@@ -1,8 +1,9 @@
 import math
 import numpy as np
 import cv2
-from scipy import interpolate
+from scipy import interpolate, io as spio
 from matplotlib import pyplot as plt
+
 
 
 def WarpCoords2(poi, V, out_size):
@@ -174,3 +175,27 @@ def compute_frechet_error_sequence(points, length_of_lines, first_points=None):
             prev_line_len += line_len
     err = (bs.sum(axis=1)) / len(length_of_lines)
     return err
+
+
+def load_points(points_file):
+    poi = spio.loadmat(points_file)
+
+    bound = np.stack(poi['spotsB'][0].squeeze())
+    inner = np.stack(poi['spotsI'][0].squeeze())
+
+    bound = bound[:, :, :2]
+    inner = inner[:, :, :2]
+
+    line1 = np.stack(poi['lines'][:, 0])
+    line2 = np.stack(poi['lines'][:, 1])
+    line3 = np.stack(poi['lines'][:, 2])
+    line4 = np.stack(poi['lines'][:, 3])
+
+    len1 = len(line1[0])
+    len2 = len(line2[0])
+    len3 = len(line3[0])
+    len4 = len(line4[0])
+
+    lines = np.concatenate((line1, line2, line3, line4), axis=1)
+    return {'bound': bound, 'inner': inner,
+            'lines': lines, 'line_length': [len1, len2, len3, len4]}
