@@ -58,8 +58,8 @@ def dots_remap_bcw(dots, deformation, num=4):
     x, y = np.meshgrid(np.arange(w), np.arange(h))
     x = x + deformation[:, :, 0]
     y = y + deformation[:, :, 1]
-    deformation *= -1.
 
+    out_dots = dots.copy()
     for d in range(len(dots)):
         k = ((x - dots[d, 0]) ** 2 + (y - dots[d, 1]) ** 2) ** 0.5
         indexes = []
@@ -76,18 +76,18 @@ def dots_remap_bcw(dots, deformation, num=4):
         indexesj = indexes[:, 1]
 
         for i, (idi, idj) in enumerate(zip(indexesi, indexesj)):
-            fx += deformation[idi, idj, 0]
-            fy += deformation[idi, idj, 1]
+            fx += -1*deformation[idi, idj, 0]
+            fy += -1*deformation[idi, idj, 1]
 
         fx = fx / num
         fy = fy / num
 
-        dots[d, 0] += fx
-        dots[d, 1] += fy
+        out_dots[d, 0] += fx
+        out_dots[d, 1] += fy
 
-    dots[:, 0] = np.clip(dots[:, 0], 0, w)
-    dots[:, 1] = np.clip(dots[:, 1], 0, h)
-    return dots
+    out_dots[:, 0] = np.clip(out_dots[:, 0], 0, w)
+    out_dots[:, 1] = np.clip(out_dots[:, 1], 0, h)
+    return out_dots
 
 
 def dots_remap_bcw_mt(dots, deformation, num=4):
