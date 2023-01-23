@@ -29,6 +29,7 @@ dataset:
   use_crop: false
   use_masks: true
   multiply_mask: true
+  gauss_sigma: -1.
   
 device: cuda:0
 expdir: ../DefReg/src
@@ -68,3 +69,4 @@ val_dataset:
   use_crop: false
   use_masks: true
   multiply_mask: true
+  gauss_sigma: -1.
