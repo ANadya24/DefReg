@@ -86,7 +86,7 @@ def gradient(x):
     return dx, dy
 
 
-def deformation_smoothness_loss(flow):
+def deformation_smoothness(flow):
     """
     Computes a deformation smoothness based custom_losses as described here:
     https://link.springer.com/content/pdf/10.1007%2F978-3-642-33418-4_16.pdf
@@ -159,11 +159,36 @@ def mse(x, y):
     return torch.mean((x - y) ** 2)
 
 
-# def deformation_incompressibility(deformation):
-#     # TODO
-    
-# def elasticity_loss():
-#     # TODO
+def deformation_isotropic_TV(deformation):
+    dx = (deformation[:, 1:, 1:, :] - deformation[:-1, 1:, :]).pow(2)
+    dy = (deformation[:, 1:, 1:, :] - deformation[1:, :-1, :]).pow(2)
+    return torch.mean(F.pad(dx + dy, (0, 1, 0, 1)))
+
+
+def divergence(deformation):
+    dx, dy = gradient(deformation)
+    div = dx[:, 0] + dy[:, 1]
+    return div
+
+
+def deformation_incompressibility(deformation):
+    b, c, h, w = deformation.shape
+    div = divergence(deformation)
+    return (div**2).sum() / (c*h*w)
+
+
+def deformation_elasticity(deformation, gamma=0.007, beta=0.001):
+    beta = 0.001
+    gamma = beta * 7
+
+    dx, dy = gradient(deformation)
+    s = (dx[:, 0] ** 2).sum() + (dy[:, 0] ** 2).sum()
+    s += (dx[:, 1] ** 2).sum() + (dy[:, 1] ** 2).sum()
+
+    t = ((dx[:, 0] + dy[:, 1])**2).sum()
+
+    return torch.exp(-1. * beta * s) * torch.exp(-1 * gamma * t)
+
 
 # def TPS_loss():
 #     # TODO
@@ -227,7 +252,7 @@ def total_loss(reg, fixed, deform, gt_deform, diff):
     #    l_def = L2Def(deform, gt_deform)
     #    print('Def custom_losses', l_def)
     #    l_smooth = smooothing_loss(reg)
-    l_smooth = deformation_smoothness_loss(deform)
+    l_smooth = deformation_smoothness(deform)
     print('Smooth custom_losses', l_smooth)
     print()
     #    return l_im + im_dice + mask_dice + 0.01*l_def + 0.3*l_smooth, l_im, l_def #+ 0.025*l_def, l_im, l_def

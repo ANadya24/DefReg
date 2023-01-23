@@ -5,7 +5,10 @@ from custom_losses.losses import (
     cross_correlation_loss,
     ssim_loss,
     dice_loss,
-    deformation_smoothness_loss
+    deformation_smoothness,
+    deformation_elasticity,
+    deformation_incompressibility,
+    deformation_isotropic_TV
 )
 from src.config import CriterionConfig
 import torch.nn
@@ -74,7 +77,31 @@ class DeformationSmooth(nn.Module):
         super().__init__()
 
     def forward(self, pred):
-        return deformation_smoothness_loss(pred)
+        return deformation_smoothness(pred)
+
+
+class DeformationElasticity(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, pred):
+        return deformation_elasticity(pred)
+
+
+class DeformationIncompress(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, pred):
+        return deformation_incompressibility(pred)
+
+
+class DeformationIsotropicTV(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, pred):
+        return deformation_isotropic_TV(pred)
 
 
 class CustomCriterion(nn.Module):
