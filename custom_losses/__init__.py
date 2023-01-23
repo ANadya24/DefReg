@@ -4,5 +4,8 @@ from .loss_classes import (
     SSIMLoss,
     DiceLoss,
     DeformationSmooth,
-    MaskedL1Loss
+    MaskedL1Loss,
+    DeformationIsotropicTV,
+    DeformationElasticity,
+    DeformationIncompress
 )
