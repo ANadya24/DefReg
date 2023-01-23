@@ -1,19 +1,19 @@
 import numpy as np
-import torch
 from torchvision.transforms import ToTensor
 from torch.utils import data
-from skimage import io, color
+from skimage import io, color, filters
 from scipy import io as spio
 import albumentations as A
 from utils.data_process import pad_image, match_histograms, normalize_mean_std, normalize_min_max
 
 MAX_LINE_LEN = 20
+np.random.seed(1234)
 
 
 class Dataset(data.Dataset):
     def __init__(self, image_sequences, image_keypoints,
                  im_size=(1, 256, 256),
-                 train=True, register_limit=5,
+                 train=True, register_limit=5, gauss_sigma=-1,
                  use_masks=True, use_crop=False, multiply_mask=True,
                  return_points=True):
         """
@@ -34,6 +34,7 @@ class Dataset(data.Dataset):
         self.multiply_mask = multiply_mask
         self.use_crop = use_crop
         self.train = train
+        self.gauss_sigma = gauss_sigma
         self.im_size = im_size[1:]
         self.return_points = return_points
 
@@ -132,6 +133,9 @@ class Dataset(data.Dataset):
     def __len__(self):
         return self.length
 
+    def reset(self):
+        np.random.shuffle(self.seq_numeration)
+
     def __getitem__(self, index):
         seq_idx, it = self.seq_numeration[index]
         current_seq_len = len(self.image_sequences[seq_idx])
@@ -227,7 +231,7 @@ class Dataset(data.Dataset):
         #     mask2 = data2['mask']
 
         if self.train:
-            h, w = self.im_size
+            # h, w = self.im_size
             if np.random.rand() < 0.5:
                 image1 = image1[:, ::-1].copy()
                 image2 = image2[:, ::-1].copy()
@@ -257,6 +261,15 @@ class Dataset(data.Dataset):
                                  image2=image2.astype(np.float32), )  # keypoints2=points2)
             image1 = data['image']
             image2 = data['image2']
+
+        if self.gauss_sigma > 0.:
+            if self.use_masks and self.multiply_mask:
+                image1[:, :, 0] = filters.gaussian(image1[:, :, 0], self.gauss_sigma)
+                image2[:, :, 0] = filters.gaussian(image2[:, :, 0], self.gauss_sigma)
+            else:
+                image1 = filters.gaussian(image1, self.gauss_sigma)
+                image2 = filters.gaussian(image2, self.gauss_sigma)
+
         if self.use_masks and self.multiply_mask:
             image1 = image1[:, :, 0] * image1[:, :, 1]
             image2 = image2[:, :, 0] * image2[:, :, 1]

@@ -21,6 +21,7 @@ class DatasetConfig(BaseModel):
     use_masks: bool = True
     use_crop: bool = False
     multiply_mask: bool = True
+    gauss_sigma: float = -1
 
 
 class LossConfig(BaseModel):
