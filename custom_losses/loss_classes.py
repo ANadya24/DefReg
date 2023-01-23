@@ -81,11 +81,13 @@ class DeformationSmooth(nn.Module):
 
 
 class DeformationElasticity(nn.Module):
-    def __init__(self):
+    def __init__(self, gamma=0.007, beta=0.001):
         super().__init__()
+        self.gamma = gamma
+        self.beta = beta
 
     def forward(self, pred):
-        return deformation_elasticity(pred)
+        return deformation_elasticity(pred, self.gamma, self.beta)
 
 
 class DeformationIncompress(nn.Module):

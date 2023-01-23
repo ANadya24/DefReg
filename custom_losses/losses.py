@@ -178,8 +178,6 @@ def deformation_incompressibility(deformation):
 
 
 def deformation_elasticity(deformation, gamma=0.007, beta=0.001):
-    beta = 0.001
-    gamma = beta * 7
 
     dx, dy = gradient(deformation)
     s = (dx[:, 0] ** 2).sum() + (dy[:, 0] ** 2).sum()
