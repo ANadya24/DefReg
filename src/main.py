@@ -29,10 +29,10 @@ if __name__ == "__main__":
 
     if not os.path.exists(config.savedir):
         os.makedirs(config.savedir, exist_ok=True)
-    shutil.copy(args.config_file, config.savedir + '/' + args.config_file.split('/')[-1])
-    if os.path.exists(config.savedir + '/' + config.expdir.split('/')[-1]):
-        shutil.rmtree(config.savedir + '/' + config.expdir.split('/')[-1])
-    shutil.copytree(config.expdir, config.savedir + '/' + config.expdir.split('/')[-1], dirs_exist_ok=True)
+    shutil.copy(args.config_file, config.savedir + '/src/' + args.config_file.split('/')[-1])
+    if os.path.exists(config.savedir + '/src/' + config.expdir.split('/')[-1]):
+        shutil.rmtree(config.savedir + '/src/' + config.expdir.split('/')[-1])
+    shutil.copytree(config.expdir, config.savedir + '/src/' + config.expdir.split('/')[-1], dirs_exist_ok=True)
 
     # загружаем модель
     model_name = config.model.model_name
