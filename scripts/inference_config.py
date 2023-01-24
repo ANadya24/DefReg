@@ -16,6 +16,7 @@ class InferenceConfig(BaseModel):
     multiply_mask: bool = True
     normalization: str = 'min_max'
     device: str = 'cpu'
+    gauss_sigma: float = -1.
 
 
 def create_inference_config(model_path: str, save_path: str, image_sequences: List[str],

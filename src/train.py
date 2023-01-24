@@ -313,6 +313,7 @@ def train(model: torch.nn.Module,
         # time_batches = 0
 
         # Training
+        train_loader.dataset.reset()
         for batch in train_loader:
             time_batch_start = time()
             batch_losses = train_model(input_batch=batch,
