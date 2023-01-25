@@ -1,0 +1,15 @@
+device: cuda:5
+im_size: !!python/tuple
+- 1
+- 256
+- 256
+image_sequences: ['/srv/fast1/n.anoshina/DefReg/data/SeqB/SeqB1.tif', '/srv/fast1/n.anoshina/DefReg/data/SeqB/SeqB4.tif']
+mask_sequences: ['/srv/fast1/n.anoshina/DefReg/data/SeqB/SeqB1_mask.tif', '/srv/fast1/n.anoshina/DefReg/data/SeqB/SeqB4_mask.tif']
+model_path: '/srv/fast1/n.anoshina/DefReg/logs/cont_based_exp8_gauss/defregnet_loss_best'
+multiply_mask: true
+gauss_sigma: 2.1
+normalization: min_max
+postfix: ''
+save_path: '/srv/fast1/n.anoshina/DefReg/predictions/cont_based_exp8_gauss/defregnet_loss_best/'
+use_crop: false
+use_masks: true
