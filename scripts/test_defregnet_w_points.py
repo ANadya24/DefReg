@@ -22,13 +22,14 @@ if __name__ == '__main__':
 
     print("Model loaded successfully!")
 
-    with open('elast_point_dict.pkl', 'rb') as file:
-        elast_data = pickle.load(file)
-
-    with open('init_point_dict.pkl', 'rb') as file:
-        init_data = pickle.load(file)
-
     for iterator_file, file in enumerate(config.image_sequences):
+        seq_name = file.split("/")[-1].split(".")[0]
+        with open(f'elast_point_dict_{seq_name}.pkl', 'rb') as file:
+            elast_data = pickle.load(file)
+
+        # with open(f'init_point_dict_{seq_name}.pkl', 'rb') as file:
+        #     init_data = pickle.load(file)
+
         print('iterative_neigbours_predict')
         model.use_theta = True
         prev_use_elastic = False
