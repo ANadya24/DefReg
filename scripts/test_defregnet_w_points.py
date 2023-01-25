@@ -27,10 +27,10 @@ if __name__ == '__main__':
     for iterator_file, file in enumerate(config.image_sequences):
         seq_name = file.split("/")[-1].split(".")[0]
         print(seq_name)
-        with open(f'elast_point_dict_{seq_name}.pkl', 'rb') as file:
+        with open(f'../data/point_dicts/elast_point_dict_{seq_name}.pkl', 'rb') as file:
             elast_data = pickle.load(file)
 
-        # with open(f'init_point_dict_{seq_name}.pkl', 'rb') as file:
+        # with open(f'../data/point_dicts/init_point_dict_{seq_name}.pkl', 'rb') as file:
         #     init_data = pickle.load(file)
 
         print('iterative_neigbours_predict')
