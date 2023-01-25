@@ -1,3 +1,5 @@
+import sys
+sys.path.append('/srv/fast1/n.anoshina/DefReg/')
 from typing import cast
 import torch
 import pickle
@@ -12,9 +14,9 @@ from inference_sequence import iterative_neigbours_predict, \
 
 if __name__ == '__main__':
     config = cast(InferenceConfig, load_yaml(InferenceConfig,
-                                             './DefReg/scripts/inference_config.yaml'))
+                                             './inference_config.yaml'))
     elast_config = cast(InferenceConfig, load_yaml(InferenceConfig,
-                                                   './DefReg/scripts/inference_config_elastic.yaml'))
+                                                   './inference_config_elastic.yaml'))
     model = DefRegNet(2, image_size=config.im_size[1], device=config.device)  # , use_theta=False)
     model_dict = torch.load(config.model_path, map_location=config.device)
     model.load_state_dict(model_dict['model_state_dict'])
