@@ -1,21 +1,15 @@
 from matplotlib import pyplot as plt
-
-from typing import cast
 import os
 import numpy as np
-import argparse
 import skimage.io as io
 from skimage import color, filters
 from skimage.transform import resize
-from tqdm import tqdm
 import torch
 import torch.nn.functional as F
 from torchvision.transforms import ToTensor
 import albumentations as A
 
 from scripts.inference_config import InferenceConfig
-from src.config import load_yaml
-from models.defregnet_model import DefRegNet
 from basic_nets.spatial_transform import SpatialTransformation
 from utils.data_process import (
     pad_image, match_histograms,
@@ -174,7 +168,6 @@ def save(seq, thetas, deformations, path, name):
 
 
 def show(moving, fixed, reg, name='', pause_by_input=True):
-    from matplotlib import pyplot as plt
     mov = moving * 255
     fix = fixed * 255
     reg = reg * 255

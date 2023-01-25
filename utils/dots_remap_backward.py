@@ -46,3 +46,14 @@ def remap_centroids_all_backward(points, deformations):
         points_reg1 = points_reg1[len(points[j]):]
 
     return points_reg
+
+
+def remap_centroids_all_backward_0_k(points, deformations):
+    points_reg = points.copy()
+    points_len = len(points)
+    if points_len > 0:
+        for j in range(points_len - 1, -1, -1):
+            cur_def = deformations[j]
+            points_reg[j] = algo_ff_remap_centroids_backward(points[j], cur_def)
+
+    return points_reg
