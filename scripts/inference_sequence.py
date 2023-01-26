@@ -95,22 +95,26 @@ def iterative_neigbours_predict(iterator_file, file, model, config, prev_use_ela
                 reg_inner[j] = dots_affine_transform(reg_inner[j], theta, h=h,
                                                      w=w)
 
-                # reg_lines[j] = dots_affine_transform(reg_lines[j], theta, h=h,
-                #                                  w=w)
+                reg_lines[j] = dots_affine_transform(reg_lines[j], theta, h=h,
+                                                 w=w)
 
             reg_bound[j] = dots_remap_bcw(reg_bound[j], numpy_deformation)
 
             reg_inner[j] = dots_remap_bcw(reg_inner[j], numpy_deformation)
 
-            # reg_lines[j] = dots_remap_bcw(reg_lines[j], numpy_deformation)
+            reg_lines[j] = dots_remap_bcw(reg_lines[j], numpy_deformation)
 
             if config.use_masks:
                 new_mask_seq[j] = apply_theta_and_deformation2image(new_mask_seq[j], theta,
                                                                     deformation[0])[0]
 
-    print(np.mean(compute_l2_error_sequence(reg_bound)))
-    print(np.mean(compute_l2_error_sequence(reg_inner)))
-    # print(np.mean(compute_frechet_error_sequence(reg_lines, line_lengths)))
+    errB = np.mean(compute_l2_error_sequence(reg_bound))
+    errI = np.mean(compute_l2_error_sequence(reg_inner))
+    errL = np.mean(compute_frechet_error_sequence(reg_lines, line_lengths))
+    print(errB)
+    print(errI)
+    print(errL)
+
     new_seq2 = new_seq.copy()
     for i in range(len(new_seq)):
         new_seq2[i] = draw(new_seq2[i],
@@ -118,6 +122,7 @@ def iterative_neigbours_predict(iterator_file, file, model, config, prev_use_ela
 
     save_asis(new_seq, config.save_path + f'/{save_folder}/', file.split('/')[-1])
     save_asis(new_seq2, config.save_path + f'/{save_folder}/', 'viz_' + file.split('/')[-1])
+    return errB, errI, errL
 
 
 def collect_deformations_frame(iterator_file, file, model, config, num_frame=0):
@@ -160,12 +165,12 @@ def collect_deformations_frame(iterator_file, file, model, config, num_frame=0):
 def apply_2nd_step_defs(data, defs, summarize=False):
     reg_bound = data['bound']
     reg_inner = data['inner']
-    # reg_lines = data['lines']
+    reg_lines = data['lines']
 
     deform = None
     reg2_bound = reg_bound.copy()
     reg2_inner = reg_inner.copy()
-    # reg2_lines = reg_lines.copy()
+    reg2_lines = reg_lines.copy()
 
     for i in range(1, len(defs)):
         cur_def = defs[i]
@@ -179,8 +184,12 @@ def apply_2nd_step_defs(data, defs, summarize=False):
 
         reg2_bound[i] = dots_remap_bcw(reg_bound[i].copy(), deform.copy())
         reg2_inner[i] = dots_remap_bcw(reg_inner[i].copy(), deform.copy())
-        # reg2_lines[i] = dots_remap_bcw(reg_lines[i].copy(), deform.copy())
+        reg2_lines[i] = dots_remap_bcw(reg_lines[i].copy(), deform.copy())
 
-    print(np.mean(compute_l2_error_sequence(reg2_bound)))
-    print(np.mean(compute_l2_error_sequence(reg2_inner)))
-    # print(np.mean(compute_frechet_error_sequence(reg2_lines, line_lengths)))
+    errB = np.mean(compute_l2_error_sequence(reg2_bound))
+    errI = np.mean(compute_l2_error_sequence(reg2_inner))
+    errL = np.mean(compute_frechet_error_sequence(reg2_lines, data['line_length']))
+    print(errB)
+    print(errI)
+    print(errL)
+    return errB, errI, errL
