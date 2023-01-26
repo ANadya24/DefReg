@@ -141,3 +141,32 @@ class DefRegNet(nn.Module):
         output['nans'] = nan_flag
 
         return output
+
+    def forward_seq(self, batch_sequence):
+        final_batch_deformation = None
+        batch_moving = batch_sequence[-1]
+        for i in range(1, len(batch_sequence)):
+            batch_fixed = batch_sequence[i-1]
+            batch_moving = batch_sequence[i]
+            # if self.use_theta:
+            #     batch_affine_moving, theta = self.stn(batch_fixed, batch_moving)
+            # else:
+            #     batch_affine_moving = batch_moving
+
+            x = torch.cat([batch_moving, batch_fixed], dim=1)
+            batch_deformation = self.unet(x)
+            if final_batch_deformation is None:
+                final_batch_deformation = batch_deformation
+            else:
+                final_batch_deformation += self.spatial_transform(
+                    batch_deformation, final_batch_deformation)
+        batch_registered = self.spatial_transform(batch_moving, final_batch_deformation)
+
+        output = {'batch_registered': batch_registered,
+                  'batch_deformation': final_batch_deformation,
+                  }
+
+        # if self.use_theta:
+        #     output.update({'theta': theta, 'affine_trf_registered': batch_affine_moving})
+
+        return output
