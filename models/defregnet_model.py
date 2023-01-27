@@ -144,10 +144,10 @@ class DefRegNet(nn.Module):
 
     def forward_seq(self, batch_sequence):
         final_batch_deformation = None
-        batch_moving = batch_sequence[-1]
-        for i in range(1, len(batch_sequence)):
-            batch_fixed = batch_sequence[i-1]
-            batch_moving = batch_sequence[i]
+        batch_moving = batch_sequence[:, -1]
+        for i in range(1, len(batch_sequence[0])):
+            batch_fixed = batch_sequence[:, i-1]
+            batch_moving = batch_sequence[:, i]
             # if self.use_theta:
             #     batch_affine_moving, theta = self.stn(batch_fixed, batch_moving)
             # else:

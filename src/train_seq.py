@@ -29,7 +29,7 @@ def train_model(input_batch: torch.Tensor,
     input_batch = input_batch.to(device)
 
     output_dict = model.forward_seq(input_batch)
-    output_dict.update({'batch_fixed': input_batch[:, :1], 'batch_moving': input_batch[:, -1:]})
+    output_dict.update({'batch_fixed': input_batch[:, 1], 'batch_moving': input_batch[:, -1]})
 
     losses = loss(output_dict)
     train_loss = losses['total_loss']
@@ -68,9 +68,10 @@ def validate_model_by_points(model, val_seq, val_mask_seq, val_points, val_confi
         if deformation is not None:
             deformation += model.spatial_transform(deformation, cur_deformation)
         else:
-            deformation = cur_deformation.copy()
+            deformation = cur_deformation
 
-        np_deformation = resize_deformation(deformation[0].detach().cpu().numpy(), h, w)[None]
+        np_deformation = resize_deformation(deformation[0].detach().cpu().permute(1,2,0).numpy(),
+                                            h, w)[None]
         defs = np.concatenate([defs, np_deformation], axis=0)
 
     reg_points = points.copy()
@@ -81,7 +82,7 @@ def validate_model_by_points(model, val_seq, val_mask_seq, val_points, val_confi
 
     errors = compute_l2_error_sequence(points)
 
-    output = {'l2_point_error': torch.mean(errors)}
+    output = {'l2_point_error': np.mean(errors)}
     model.use_theta = use_theta
     return output
 
@@ -100,7 +101,7 @@ def validate_model(input_batch: torch.Tensor,
 
         output_dict = model.forward_seq(input_batch)
 
-        output_dict.update({'batch_fixed': input_batch[:, :1], 'batch_moving': input_batch[:, -1:]})
+        output_dict.update({'batch_fixed': input_batch[:, 1], 'batch_moving': input_batch[:, -1]})
 
         losses = loss(output_dict)
 
@@ -169,6 +170,7 @@ def train(model: torch.nn.Module,
             val_points, val_config = validation_list
 
             best_metric_values['l2_point_error'] = np.mean(compute_l2_error_sequence(val_points))
+            print('l2_point_error', best_metric_values['l2_point_error'])
 
     for epoch in range(load_epoch, max_epochs):
         train_losses = defaultdict(lambda: 0.)
@@ -229,7 +231,7 @@ def train(model: torch.nn.Module,
 
         if validate_by_points:
             val_metrics = validate_model_by_points(model, val_seq,
-                                                   val_mask_seq, points, val_config)
+                                                   val_mask_seq, val_points, val_config)
 
         print('Epoch', epoch + 1, 'train_loss/test_loss: ',
               train_losses['total_loss'], '/', val_losses['total_loss'])
@@ -247,7 +249,7 @@ def train(model: torch.nn.Module,
 
         for key in val_metrics:
             if key not in best_metric_values or val_metrics[key] < best_metric_values[key]:
-                best_metric_values[key] = val_metrics[key].item()
+                best_metric_values[key] = val_metrics[key]
                 save_model(model, model_name + f'_{key}')
         print()
 

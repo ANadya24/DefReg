@@ -153,7 +153,7 @@ class SeqDataset(data.Dataset):
             if self.use_masks:
                 resize_dict['mask'] = masks[i]
             data = self.resize(**resize_dict)
-            images[i] = data['image']
+            images[i] = data['image'].astype('float32')
             if self.use_masks:
                 masks[i] = data['mask']
 
@@ -170,9 +170,9 @@ class SeqDataset(data.Dataset):
             for i in range(1, len(images)):
                 aug_dict.update({f'image{i}': images[i].astype(np.float32)})
             data = self.aug_pipe(**aug_dict)
-            images[0] = data['image']
+            images[0] = data['image'].astype('float32')
             for i in range(1, len(images)):
-                images[i] = data[f'image{i}']
+                images[i] = data[f'image{i}'].astype('float32')
 
         if self.gauss_sigma > 0.:
             if self.use_masks and self.multiply_mask:
@@ -188,5 +188,5 @@ class SeqDataset(data.Dataset):
 
         for i in range(len(images)):
             images[i] = self.to_tensor(images[i]).float()
-
+        
         return torch.stack(images, 0)
