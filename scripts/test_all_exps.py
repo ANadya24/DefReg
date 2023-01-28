@@ -81,7 +81,7 @@ if __name__ == '__main__':
         else:
             config.gauss_sigma = -1.
         for model_name, prefix in zip(['defregnet_loss_best', 'defregnet_points_error_l2'], ['_p', '_l']):
-            model_dict = torch.load(exp_name / model_name, map_location=config.device)
+            model_dict = torch.load(Path(exp_name / model_name), map_location=config.device)
             model.load_state_dict(model_dict['model_state_dict'])
             model.to(config.device)
             table_name = exp_name.name + prefix
