@@ -69,21 +69,21 @@ if __name__ == '__main__':
         df.at['Contour', f'Inner_{seq_name}'] = errI
         df.at['Contour', f'Lines_{seq_name}'] = errL
 
-        # print('iterative_neigbours_predict')
-        # model.use_theta = True
-        # prev_use_elastic = False
-        # errB, errI, errL = iterative_neigbours_predict(iterator_file=iterator_file,
-        #                             file=filename, model=model,
-        #                             config=config, prev_use_elastic=prev_use_elastic,
-        #                             elast_data=elast_data, save_folder='initial_image_deformed')
-        #
-        # print('elastic_iterative_neigbours_predict')
-        # model.use_theta = True
-        # prev_use_elastic = True
-        # errB, errI, errL = iterative_neigbours_predict(iterator_file=iterator_file,
-        #                             file=elast_config.image_sequences[iterator_file], model=model,
-        #                             config=elast_config, prev_use_elastic=prev_use_elastic,
-        #                             elast_data=elast_data, save_folder='elastic_image_deformed')
+#         print('iterative_neigbours_predict')
+#         model.use_theta = True
+#         prev_use_elastic = False
+#         errB, errI, errL = iterative_neigbours_predict(iterator_file=iterator_file,
+#                                     file=filename, model=model,
+#                                     config=config, prev_use_elastic=prev_use_elastic,
+#                                     elast_data=elast_data, save_folder='initial_image_deformed')
+        
+#         print('elastic_iterative_neigbours_predict')
+#         model.use_theta = True
+#         prev_use_elastic = True
+#         errB, errI, errL = iterative_neigbours_predict(iterator_file=iterator_file,
+#                                     file=elast_config.image_sequences[iterator_file], model=model,
+#                                     config=elast_config, prev_use_elastic=prev_use_elastic,
+#                                     elast_data=elast_data, save_folder='elastic_image_deformed')
 
         print('elastic+frame0 deformations')
         model.use_theta = False
@@ -103,4 +103,4 @@ if __name__ == '__main__':
         # errB, errI, errL = apply_2nd_step_defs(elast_data, defs, summarize=True)
 
     with pd.ExcelWriter(f'DefRegResults.xlsx') as writer:
-        df.to_excel(writer, sheet_name=f'Sheet0')
+        df.to_excel(writer, sheet_name=f'Sheet0', float_format="%.2f")
