@@ -39,6 +39,13 @@ if __name__ == "__main__":
         shutil.rmtree(config.savedir + '/' + expdir)
     shutil.copytree(config.expdir, config.savedir + '/' + expdir, dirs_exist_ok=True)
 
+    active_dir = '/'.join(config.expdir[:-1].split('/')[:-1])
+    shutil.copytree(active_dir + '/basic_nets/', config.savedir + '/basic_nets/', dirs_exist_ok=True)
+    shutil.copytree(active_dir + '/custom_losses/', config.savedir + '/custom_losses/', dirs_exist_ok=True)
+    shutil.copytree(active_dir + '/models/', config.savedir + '/models/', dirs_exist_ok=True)
+    shutil.copytree(active_dir + '/utils/', config.savedir + '/utils/', dirs_exist_ok=True)
+    shutil.copytree(active_dir + '/scripts/', config.savedir + '/scripts/', dirs_exist_ok=True)
+
     # загружаем модель
     model_name = config.model.model_name
 
