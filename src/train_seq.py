@@ -80,7 +80,7 @@ def validate_model_by_points(model, val_seq, val_mask_seq, val_points, val_confi
         cur_def = defs[i]
         reg_points[i] = dots_remap_bcw(points[i], cur_def)
 
-    errors = compute_l2_error_sequence(points)
+    errors = compute_l2_error_sequence(reg_points)
 
     output = {'l2_point_error': np.mean(errors)}
     model.use_theta = use_theta
