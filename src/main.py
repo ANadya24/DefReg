@@ -99,7 +99,8 @@ if __name__ == "__main__":
               'num_workers': config.num_workers,
               'shuffle': False,
               'pin_memory': True,
-              'drop_last': True}
+              'drop_last': True,
+              'prefetch_factor': 8}
     training_generator = data.DataLoader(train_dataset, **params)
     validation_generator = data.DataLoader(val_dataset, **params)
     optimizer = getattr(torch.optim, config.optimizer.name)(
