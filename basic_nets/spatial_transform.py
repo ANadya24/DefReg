@@ -121,3 +121,23 @@ class SpatialTransformation(nn.Module):
         y_new = dy + y_mesh
 
         return self.interpolate(moving_image, x_new, y_new).permute(0, 3, 1, 2)
+
+    def flow_remap(self, flow_left, flow_right):
+        batch_size, _, height, width = flow_left.shape
+
+        dx = flow_left[:, 0, :, :]
+        dy = flow_left[:, 1, :, :]
+
+        x, y = self.meshgrid(height, width)
+        x_mesh, y_mesh = self.meshgrid(height, width)
+
+        x_mesh = x_mesh.expand([batch_size, height, width])
+        y_mesh = y_mesh.expand([batch_size, height, width])
+
+        x_grid = dx + x_mesh
+        y_grid = dy + y_mesh
+
+        return self.interpolate(flow_right.permute(0, 2, 3, 1), x_grid, y_grid).permute(0, 3, 1, 2)
+
+    def flow_sum(self, flow1, flow2):
+        return flow1 + self.flow_remap(flow1, flow2)

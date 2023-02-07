@@ -58,7 +58,6 @@ class DefRegNet(nn.Module):
         # self.spatial_transform = self.spatial_transform.to(device)
         self.spatial_transform.device = device
 
-        
     @property
     def device(self):
         return next(self.parameters()).device
@@ -158,8 +157,8 @@ class DefRegNet(nn.Module):
             if final_batch_deformation is None:
                 final_batch_deformation = batch_deformation
             else:
-                final_batch_deformation += self.spatial_transform(
-                    batch_deformation, final_batch_deformation)
+                final_batch_deformation = self.spatial_transform.flow_sum(final_batch_deformation,
+                                                                          batch_deformation)
         batch_registered = self.spatial_transform(batch_moving, final_batch_deformation)
 
         output = {'batch_registered': batch_registered,
