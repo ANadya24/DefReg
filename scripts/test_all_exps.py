@@ -1,4 +1,5 @@
 import sys
+import os
 
 sys.path.append('/srv/fast1/n.anoshina/DefReg/')
 from typing import cast
@@ -26,7 +27,12 @@ if __name__ == '__main__':
     elast_config = cast(InferenceConfig, load_yaml(InferenceConfig,
                                                    './inference_config_elastic.yaml'))
 
-    exps = glob('../logs/cont_based_exp*')
+    if os.path.exists('./experiments.txt'):
+        with open('./experiments.txt', 'r') as file:
+            lines = file.readlines()
+        exps = [l.strip() for l in lines]
+    else:
+        exps = glob('../logs/cont_based_exp*')
     exp_names = [exp.split('/')[-1] + '_p' for exp in exps]
     exp_names = [[item + '_p', item + '_l'] for item in exp_names]
     exp_names = [[subitem, subitem + '_after_cont'] for item in exp_names for subitem in item]
