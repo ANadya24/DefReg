@@ -28,6 +28,8 @@ if __name__ == '__main__':
     model_dict = torch.load(config.model_path, map_location=config.device)
     model.load_state_dict(model_dict['model_state_dict'])
     model.to(config.device)
+    
+    exp_name = config.model_path.split('/')[-2]
 
     print("Model loaded successfully!")
 
@@ -102,5 +104,5 @@ if __name__ == '__main__':
         #                                   config=elast_config, num_frame=1)
         # errB, errI, errL = apply_2nd_step_defs(elast_data, defs, summarize=True)
 
-    with pd.ExcelWriter(f'DefRegResults.xlsx') as writer:
+    with pd.ExcelWriter(f'DefRegResults_{exp_name}.xlsx') as writer:
         df.to_excel(writer, sheet_name=f'Sheet0', float_format="%.2f")
