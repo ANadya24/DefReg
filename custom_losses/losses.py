@@ -160,8 +160,8 @@ def mse(x, y):
 
 
 def deformation_isotropic_TV(deformation):
-    dx = (deformation[:, 1:, 1:, :] - deformation[:-1, 1:, :]).pow(2)
-    dy = (deformation[:, 1:, 1:, :] - deformation[1:, :-1, :]).pow(2)
+    dx = (deformation[:, 1:, 1:, :] - deformation[:, :-1, 1:, :]).pow(2)
+    dy = (deformation[:, 1:, 1:, :] - deformation[:, 1:, :-1, :]).pow(2)
     return torch.mean(F.pad(dx + dy, (0, 1, 0, 1)))
 
 
