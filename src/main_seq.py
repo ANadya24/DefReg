@@ -22,7 +22,7 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    torch.multiprocessing.set_start_method('spawn')
+    # torch.multiprocessing.set_start_method('spawn')
     args = parse_args()
     config = cast(Config, load_yaml(Config, args.config_file))
 
@@ -90,7 +90,7 @@ if __name__ == "__main__":
               'shuffle': False,
               'pin_memory': True,
               'drop_last': True,
-              'prefetch_factor': 8}
+              'prefetch_factor': 1}
     training_generator = data.DataLoader(train_dataset, **params)
     validation_generator = data.DataLoader(val_dataset, **params)
     optimizer = getattr(torch.optim, config.optimizer.name)(

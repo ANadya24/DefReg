@@ -49,6 +49,7 @@ def train_model(input_batch: torch.Tensor,
 
 
 def validate_model_by_points(model, val_seq, val_mask_seq, val_points, val_config):
+    model.eval()
     use_theta = model.use_theta
     model.use_theta = False
     defs = np.zeros((1,) + val_seq[0].shape + (2,))
@@ -57,22 +58,23 @@ def validate_model_by_points(model, val_seq, val_mask_seq, val_points, val_confi
     points = val_points
 
     deformation = None
-    for i in range(1, len(val_seq)):
-        frame = i-1
-        fixed, moving = preprocess_image_pair(val_seq[frame], val_seq[i], val_config,
-                                              val_mask_seq[frame], val_mask_seq[i])
-        fixed = fixed.to(model.device)
-        moving = moving.to(model.device)
-        model_output = model(moving, fixed)
-        cur_deformation = model_output['batch_deformation']
-        if deformation is not None:
-            deformation += model.spatial_transform(deformation, cur_deformation)
-        else:
-            deformation = cur_deformation
+    with torch.no_grad():
+        for i in range(1, len(val_seq)):
+            frame = i-1
+            fixed, moving = preprocess_image_pair(val_seq[frame], val_seq[i], val_config,
+                                                  val_mask_seq[frame], val_mask_seq[i])
+            fixed = fixed.to(model.device)
+            moving = moving.to(model.device)
+            model_output = model(moving, fixed)
+            cur_deformation = model_output['batch_deformation']
+            if deformation is not None:
+                deformation = model.spatial_transform.flow_sum(deformation, cur_deformation)
+            else:
+                deformation = cur_deformation
 
-        np_deformation = resize_deformation(deformation[0].detach().cpu().permute(1,2,0).numpy(),
-                                            h, w)[None]
-        defs = np.concatenate([defs, np_deformation], axis=0)
+            np_deformation = resize_deformation(deformation[0].detach().cpu().permute(1,2,0).numpy(),
+                                                h, w)[None]
+            defs = np.concatenate([defs, np_deformation], axis=0)
 
     reg_points = points.copy()
 
@@ -180,6 +182,8 @@ def train(model: torch.nn.Module,
 
         # Training
         train_loader.dataset.reset()
+        # print('GO!')
+        # start = time()
         for batch in train_loader:
             batch_losses = train_model(input_batch=batch,
                                        model=model,
@@ -200,10 +204,13 @@ def train(model: torch.nn.Module,
                 global_i += 1
         for key in train_losses:
             train_losses[key] /= total
-
+        # end = time()
+        # print('Train epoch time', end-start)
+        
         # Testing
         total = 0
         # time_batches = 0
+        # start = time()
         for batch in val_loader:
             # time_batch_start = time()
             batch_losses = validate_model(input_batch=batch,
@@ -225,6 +232,8 @@ def train(model: torch.nn.Module,
 
         for key in val_losses:
             val_losses[key] /= total
+        # end = time()
+        # print('Val epoch time', end-start)
 
         if scheduler is not None:
             scheduler.step(val_losses['total_loss'])

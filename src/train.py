@@ -303,17 +303,22 @@ def train(model: torch.nn.Module,
     best_loss_value = None
 
     for epoch in range(load_epoch, max_epochs):
-        # time_epoch_start = time()
+        
+        time_epoch_start = time()
+        
         train_losses = defaultdict(lambda: 0.)
         val_losses = defaultdict(lambda: 0.)
         val_metrics = defaultdict(lambda: 0.)
         total = 0
 
-        # total_batches = 0
-        # time_batches = 0
+        total_batches = 0
+        time_batches = 0
 
         # Training
+        start = time()
         train_loader.dataset.reset()
+        end = time()
+        print(f'Time to reset: {end-start} sec')
         for batch in train_loader:
             time_batch_start = time()
             batch_losses = train_model(input_batch=batch,
@@ -337,12 +342,15 @@ def train(model: torch.nn.Module,
                 for key in batch_losses:
                     summary_writer.add_scalar(key, batch_losses[key].item(), global_i)
                 global_i += 1
-        #             time_batch_end = time()
-        #             time_batches += time_batch_end - time_batch_start
-        #             total_batches +=1
+            
+            time_batch_end = time()
+            # print(f'Batch processing time: {time_batch_end - time_batch_start} sec')
+            time_batches += time_batch_end - time_batch_start
+            total_batches +=1
 
-        #         print('time for batch =', time_batches / total_batches)
-        # total_batches = 0
+        print('average time for batch =', time_batches / total_batches)
+        total_batches = 0
+        
         for key in train_losses:
             train_losses[key] /= total
 
@@ -352,9 +360,11 @@ def train(model: torch.nn.Module,
 
         # Testing
         total = 0
-        # time_batches = 0
+        time_batches = 0
+        total_batches = 0
+        
         for batch in val_loader:
-            # time_batch_start = time()
+            time_batch_start = time()
             batch_losses, batch_metrics = validate_model(input_batch=batch,
                                                          model=model,
                                                          device=device,
@@ -379,11 +389,12 @@ def train(model: torch.nn.Module,
                     summary_writer.add_scalar(key, batch_metrics[key].item(), global_j)
                 global_j += 1
 
-        #             time_batch_end = time()
-        #             time_batches += time_batch_end - time_batch_start
-        #             total_batches +=1
+            time_batch_end = time()
+            time_batches += time_batch_end - time_batch_start
+            total_batches +=1
 
-        #         print('time for val batch =', time_batches / total_batches)
+        print('average time for val batch =', time_batches / total_batches)
+        total_batches = 0
 
         for key in val_losses:
             val_losses[key] /= total
@@ -422,8 +433,8 @@ def train(model: torch.nn.Module,
             for key in val_metrics:
                 summary_writer.add_scalar('epoch_val_' + key, val_metrics[key], epoch)
 
-        # time_epoch_end = time()
-        # print('time for epoch =', time_epoch_end - time_epoch_start)
+        time_epoch_end = time()
+        print('time for epoch =', time_epoch_end - time_epoch_start)
 
         # if (epoch + 1) % save_step == 0:
         #     save_model(model, model_name)
