@@ -10,6 +10,7 @@ class ModelConfig(BaseModel):
     image_size: int = 128
     use_theta: bool = True
     use_diffeomorphic: bool = False
+    inter_channel: Tuple[int, int, int] = (32, 64, 128)
 
 
 class DatasetConfig(BaseModel):

@@ -15,10 +15,12 @@ class DefRegNet(nn.Module):
     """
 
     def __init__(self, in_channels, image_size=128, device='cpu',
-                 use_theta: bool = True, use_diffeomorphic: bool = False):
+                 use_theta: bool = True, use_diffeomorphic: bool = False,
+                 inter_channels=(32, 64, 128)):
         super(DefRegNet, self).__init__()
 
         #################################
+        self.inter_channels = inter_channels
         self.use_theta = use_theta
         self.use_diffeomorphic = use_diffeomorphic
         if self.use_diffeomorphic:
@@ -50,7 +52,7 @@ class DefRegNet(nn.Module):
             self.fc_loc = None
         ####################################################################
 
-        self.unet = UNet(in_channels, 2)
+        self.unet = UNet(in_channels, 2, inter_channel=self.inter_channels)
         self.spatial_transform = SpatialTransformation(device=device)
         self.unet.apply(init_weights)
 
