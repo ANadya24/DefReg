@@ -19,7 +19,7 @@ from utils.data_process import (
 )
 
 
-def preprocess_image_pair(image1, image2, config: InferenceConfig, mask1=None, mask2=None, use_bilateral=False):
+def preprocess_image_pair(image1, image2, config: InferenceConfig, mask1=None, mask2=None):
     to_tensor = ToTensor()
     resizer = A.Resize(*config.im_size[1:])
 
@@ -69,7 +69,7 @@ def preprocess_image_pair(image1, image2, config: InferenceConfig, mask1=None, m
         mask2 = data2['mask']
         
     if config.gauss_sigma > 0.:
-        if use_bilateral:
+        if config.use_bilateral:
             image1 = cv2.bilateralFilter(image1.astype('float32'), 28, 3.87, 4.36)
             image2 = cv2.bilateralFilter(image2.astype('float32'), 28, 3.87, 4.36)
         else:
