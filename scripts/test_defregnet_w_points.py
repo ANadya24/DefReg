@@ -6,6 +6,7 @@ import torch
 import pickle
 import numpy as np
 import pandas as pd
+import cv2
 
 from models.defregnet_model import DefRegNet
 

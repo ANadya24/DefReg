@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     checkpoint = None
     if config.load_epoch:
-        checkpoint = torch.load(config.model_path)
+        checkpoint = torch.load(config.model_path, map_location='cpu')
         model.load_state_dict(checkpoint['model_state_dict'])
         print(f"Successfuly loaded state_dict from {config.model_path}")
 

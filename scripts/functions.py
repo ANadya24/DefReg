@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import os
 import numpy as np
+import cv2
 import skimage.io as io
 from skimage import color, filters
 from skimage.transform import resize
@@ -18,7 +19,7 @@ from utils.data_process import (
 )
 
 
-def preprocess_image_pair(image1, image2, config: InferenceConfig, mask1=None, mask2=None):
+def preprocess_image_pair(image1, image2, config: InferenceConfig, mask1=None, mask2=None, use_bilateral=False):
     to_tensor = ToTensor()
     resizer = A.Resize(*config.im_size[1:])
 
@@ -68,9 +69,15 @@ def preprocess_image_pair(image1, image2, config: InferenceConfig, mask1=None, m
         mask2 = data2['mask']
         
     if config.gauss_sigma > 0.:
-        image1 = filters.gaussian(image1, config.gauss_sigma)
-        image2 = filters.gaussian(image2, config.gauss_sigma)
-
+        if use_bilateral:
+            image1 = cv2.bilateralFilter(image1.astype('float32'), 28, 3.87, 4.36)
+            image2 = cv2.bilateralFilter(image2.astype('float32'), 28, 3.87, 4.36)
+        else:
+            image1 = filters.gaussian(image1, config.gauss_sigma)
+            image2 = filters.gaussian(image2, config.gauss_sigma)
+            
+        # image1 = cv2.bilateralFilter(image1.astype('float32'), 39, 7.125773431195023, 4.624058743718811)
+        # image2 = cv2.bilateralFilter(image2.astype('float32'), 39, 7.125773431195023, 4.624058743718811)
 
     image1 = to_tensor(image1).float()
     image2 = to_tensor(image2).float()
