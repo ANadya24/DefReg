@@ -1,5 +1,7 @@
 import numpy as np
 import skimage.io as io
+# from skimage import morphology
+# import cv2
 from tqdm import tqdm
 import torch
 
@@ -139,6 +141,12 @@ def collect_deformations_frame(iterator_file, file, model, config, num_frame=0):
         if mask_seq.shape[-1] == 3:
             mask_seq = mask_seq.sum(-1)
         mask_seq = 1. - np.clip(np.array(mask_seq, dtype=np.float32), 0., 1.)
+        # h, w = mask_seq[0].shape
+        # for i in range(len(mask_seq)):
+        #     comps = cv2.connectedComponents(np.uint8(mask_seq[i]))[1]
+        #     comps[comps != comps[h//2, w//2]] = 0
+        #     mask_seq[i][comps == 0] = 0
+        #     mask_seq[i] = morphology.remove_small_holes(np.uint8(mask_seq[i]))
 
     for i in tqdm(range(1, len(seq))):
         if num_frame != 0:

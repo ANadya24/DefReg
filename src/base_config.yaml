@@ -41,7 +41,7 @@ model:
   model_name: DefRegNet
   use_theta: true
   use_diffeomorphic: false
-  inter_channel: !!python/tuple
+  inter_channels: !!python/tuple
   - 32
   - 64
   - 128

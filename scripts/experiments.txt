@@ -1,0 +1,3 @@
+/srv/fast1/n.anoshina/DefReg/logs/cont_based_exp12_gauss/defregnet_points_error_l2
+/srv/fast1/n.anoshina/DefReg/logs/cont_based_exp6_elasticity/defregnet_points_error_l2
+/srv/fast1/n.anoshina/DefReg/logs/cont_based_exp10_incompress/defregnet_loss_best

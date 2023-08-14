@@ -51,6 +51,7 @@ if __name__ == "__main__":
 
     model_args = config.model.dict()
     model_args.pop('model_name')
+
     if config.model.model_name == 'DenoiseRegNet':
         model = getattr(models, model_name)(device=config.device, in_channels=model_args['in_channels'])
     else:
@@ -58,7 +59,7 @@ if __name__ == "__main__":
 
     checkpoint = None
     if config.load_epoch:
-        checkpoint = torch.load(config.model_path)
+        checkpoint = torch.load(config.model_path, map_location='cpu')
         model.load_state_dict(checkpoint['model_state_dict'])
         print(f"Successfuly loaded state_dict from {config.model_path}")
 

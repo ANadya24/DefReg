@@ -87,51 +87,50 @@ if __name__ == '__main__':
             #     config.gauss_sigma = 1.3
         else:
             config.gauss_sigma = -1.
-        for model_name, prefix in zip(['defregnet_loss_best', 'defregnet_points_error_l2'], ['_p', '_l']):
-            model_dict = torch.load(Path(exp_name / model_name), map_location=config.device)
-            model.load_state_dict(model_dict['model_state_dict'])
-            model.to(config.device)
-            table_name = exp_name.name + prefix
+        model_dict = torch.load(exp, map_location=config.device)
+        model.load_state_dict(model_dict['model_state_dict'])
+        model.to(config.device)
+        table_name = exp_name.parent.name
 
-            print(f"Model from {PurePath(exp_name) / model_name} loaded successfully!")
+        print(f"Model from {PurePath(exp)} loaded successfully!")
 
-            for iterator_file, filename in enumerate(config.image_sequences):
-                seq_name = filename.split("/")[-1].split(".")[0]
-                print('#' * 20)
-                print(seq_name)
-                with open(f'../data/point_dicts/elast_point_dict_{seq_name}.pkl', 'rb') as file:
-                    elast_data = pickle.load(file)
+        for iterator_file, filename in enumerate(config.image_sequences):
+            seq_name = filename.split("/")[-1].split(".")[0]
+            print('#' * 20)
+            print(seq_name)
+            with open(f'../data/point_dicts/elast_point_dict_{seq_name}.pkl', 'rb') as file:
+                elast_data = pickle.load(file)
 
-                with open(f'../data/point_dicts/init_point_dict_{seq_name}.pkl', 'rb') as file:
-                    init_data = pickle.load(file)
-                elast_data['line_length'] = init_data['line_length']
+            with open(f'../data/point_dicts/init_point_dict_{seq_name}.pkl', 'rb') as file:
+                init_data = pickle.load(file)
+            elast_data['line_length'] = init_data['line_length']
 
-                print('iterative_neigbours_predict')
-                model.use_theta = True
-                prev_use_elastic = False
-                with torch.no_grad():
-                    errB, errI, errL = iterative_neigbours_predict(iterator_file=iterator_file,
-                                                file=filename, model=model,
-                                                config=config, prev_use_elastic=prev_use_elastic,
-                                                elast_data=elast_data, save_folder='initial_image_deformed')
-                df.at[table_name, f'Bound_{seq_name}'] = errB
-                df.at[table_name, f'Inner_{seq_name}'] = errI
-                df.at[table_name, f'Lines_{seq_name}'] = errL
+            print('iterative_neigbours_predict')
+            model.use_theta = True
+            prev_use_elastic = False
+            with torch.no_grad():
+                errB, errI, errL = iterative_neigbours_predict(iterator_file=iterator_file,
+                                            file=filename, model=model,
+                                            config=config, prev_use_elastic=prev_use_elastic,
+                                            elast_data=elast_data, save_folder='initial_image_deformed')
+            df.at[table_name, f'Bound_{seq_name}'] = errB
+            df.at[table_name, f'Inner_{seq_name}'] = errI
+            df.at[table_name, f'Lines_{seq_name}'] = errL
 
-                print('elastic+frame0 deformations')
-                model.use_theta = False
-                with torch.no_grad():
-                    defs = collect_deformations_frame(iterator_file=iterator_file,
-                                                      file=elast_config.image_sequences[iterator_file], model=model,
-                                                      config=elast_config, num_frame=0)
-                errB, errI, errL = apply_2nd_step_defs(elast_data, defs, summarize=False)
-                df.at[table_name + '_after_cont', f'Bound_{seq_name}'] = errB
-                df.at[table_name + '_after_cont', f'Inner_{seq_name}'] = errI
-                df.at[table_name + '_after_cont', f'Lines_{seq_name}'] = errL
+            print('elastic+frame0 deformations')
+            model.use_theta = False
+            with torch.no_grad():
+                defs = collect_deformations_frame(iterator_file=iterator_file,
+                                                  file=elast_config.image_sequences[iterator_file], model=model,
+                                                  config=elast_config, num_frame=0)
+            errB, errI, errL = apply_2nd_step_defs(elast_data, defs, summarize=False)
+            df.at[table_name + '_after_cont', f'Bound_{seq_name}'] = errB
+            df.at[table_name + '_after_cont', f'Inner_{seq_name}'] = errI
+            df.at[table_name + '_after_cont', f'Lines_{seq_name}'] = errL
 
-                with pd.ExcelWriter(f'DefRegResults.xlsx') as writer:
-                    df.to_excel(writer, sheet_name=f'Sheet0', float_format="%.2f")
-                torch.cuda.empty_cache()
-                    
-    with pd.ExcelWriter(f'DefRegResults.xlsx') as writer:
+            with pd.ExcelWriter(f'DefRegResults_exps.xlsx') as writer:
+                df.to_excel(writer, sheet_name=f'Sheet0', float_format="%.2f")
+            torch.cuda.empty_cache()
+
+    with pd.ExcelWriter(f'DefRegResults_exps.xlsx') as writer:
                     df.to_excel(writer, sheet_name=f'Sheet0', float_format="%.2f")
