@@ -88,7 +88,7 @@ def gradient(x):
 
 def deformation_smoothness(flow):
     """
-    Computes a deformation smoothness based custom_losses as described here:
+    Computes a deformation smoothness based loss as described here:
     https://link.springer.com/content/pdf/10.1007%2F978-3-642-33418-4_16.pdf
     """
 
@@ -98,7 +98,7 @@ def deformation_smoothness(flow):
     dyx, dy2 = gradient(dy)
 
     integral = torch.mul(dx2, dx2) + torch.mul(dy2, dy2) + torch.mul(dxy, dxy) + torch.mul(dyx, dyx)
-    #    custom_losses = torch.sum(integral, [1,2,3]).mean()
+    #    loss = torch.sum(integral, [1,2,3]).mean()
     loss = torch.mean(integral)
     return loss
 
